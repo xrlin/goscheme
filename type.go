@@ -23,6 +23,12 @@ func (n NilType) String() string {
 
 var NilObj = NilType{}
 
+type Undef struct{}
+
+func (u *Undef) String() string {
+	return "<UNDEF>"
+}
+
 func IsNilObj(obj Expression) bool {
 	switch obj.(type) {
 	case NilType:
@@ -39,6 +45,9 @@ func IsPair(obj Expression) bool {
 	default:
 		return false
 	}
+}
+
+type Proc struct {
 }
 
 // Should only use with pointer
