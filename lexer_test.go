@@ -13,6 +13,12 @@ func TestTokenize(t *testing.T) {
 	}{
 		{"()", []string{"(", ")"}},
 		{"( )", []string{"(", ")"}},
+		{`"a string"`, []string{`"a string"`}},
+		{`"a string\n\\"`, []string{"\"a string\n\\\""}},
+		{`"paragraph 1
+				paragraph 2"`, []string{`"paragraph 1
+				paragraph 2"`}},
+		{`(display "string ")`, []string{"(", "display", `"string "`, ")"}},
 		{"3(display 1)", []string{"3", "(", "display", "1", ")"}},
 		{"(define x 3)", []string{"(", "define", "x", "3", ")"}},
 		{"(lambda (x y) (display x))", []string{"(", "lambda", "(", "x", "y", ")", "(", "display", "x", ")", ")"}},
