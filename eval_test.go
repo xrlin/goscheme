@@ -7,15 +7,15 @@ import (
 
 func TestEval(t *testing.T) {
 	builtinEnv := setupBuiltinEnv()
-	//ret := Eval("3", builtinEnv)
-	//assert.Equal(t, ret, Number(3))
-	//ret = Eval([]Expression{"define", "x", "3"}, builtinEnv)
-	//assert.Equal(t, Eval("x", builtinEnv), Number(3))
-	//Eval([]Expression{"define", []Expression{"fn", "y"}, []Expression{"+", "x", "y"}}, builtinEnv)
-	//assert.Equal(t, Number(6), Eval([]Expression{"fn", "x"}, builtinEnv))
+	ret := Eval("3", builtinEnv)
+	assert.Equal(t, ret, Number(3))
+	ret = Eval([]Expression{"define", "x", "3"}, builtinEnv)
+	assert.Equal(t, Eval("x", builtinEnv), Number(3))
+	Eval([]Expression{"define", []Expression{"fn", "y"}, []Expression{"+", "x", "y"}}, builtinEnv)
+	assert.Equal(t, Number(6), Eval([]Expression{"fn", "x"}, builtinEnv))
 
 	// test begin
-	ret := Eval([]Expression{"begin", "1"}, builtinEnv)
+	ret = Eval([]Expression{"begin", "1"}, builtinEnv)
 	assert.Equal(t, Number(1), ret)
 	ret = Eval([]Expression{"begin", "#t"}, builtinEnv)
 	assert.Equal(t, true, ret)

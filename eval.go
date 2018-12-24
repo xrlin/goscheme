@@ -7,64 +7,67 @@ import (
 )
 
 func Eval(exp Expression, env *Env) (ret Expression) {
-	if isNullExp(exp) {
-		return NilObj
+	for {
+		if isNullExp(exp) {
+			return NilObj
+		}
+		if IsNumber(exp) {
+			ret = expressionToNumber(exp)
+			return
+		} else if IsBoolean(exp) {
+			return IsTrue(exp)
+		} else if IsString(exp) {
+			s, _ := exp.(string)
+			pattern := regexp.MustCompile(`"(.*?)"`)
+			m := pattern.FindAllStringSubmatch(s, -1)
+			return m[0][1]
+		} else if IsSymbol(exp) {
+			var err error
+			s, _ := exp.(string)
+			ret, err = env.Find(Symbol(s))
+			if err != nil {
+				panic(err)
+			}
+			return
+		} else if IsSpecialSyntaxExpression(exp, "define") {
+			operators, _ := exp.([]Expression)
+			if len(operators) != 3 {
+				panic("define require 3 arguments")
+			}
+			ret = evalDefine(operators[1], operators[2], env)
+			return
+		} else if IsSpecialSyntaxExpression(exp, "if") {
+			e := exp.([]Expression)
+			exp = evalIf(e, env)
+			//return evalIf(e, env)
+		} else if IsSpecialSyntaxExpression(exp, "cond") {
+			return evalCond(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "begin") {
+			e := exp.([]Expression)
+			exp = evalBegin(e, env)
+		} else {
+			ops := exp.([]Expression)
+			fn := Eval(ops[0], env)
+			switch p := fn.(type) {
+			case Function:
+				var args []Expression
+				for _, arg := range ops[1:] {
+					args = append(args, Eval(arg, env))
+				}
+				return p(args...)
+			case *LambdaProcess:
+				newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
+				if len(ops[1:]) != len(p.params) {
+					panic("require " + strconv.Itoa(len(p.params)) + "but " + strconv.Itoa(len(ops[1:])) + "provide")
+				}
+				for i, arg := range ops[1:] {
+					newEnv.Set(p.params[i], Eval(arg, env))
+				}
+				exp = p.body
+				env = newEnv
+			}
+		}
 	}
-	if IsNumber(exp) {
-		ret = expressionToNumber(exp)
-		return
-	} else if IsBoolean(exp) {
-		return IsTrue(exp)
-	} else if IsString(exp) {
-		s, _ := exp.(string)
-		pattern := regexp.MustCompile(`"(.*?)"`)
-		m := pattern.FindAllStringSubmatch(s, -1)
-		return m[0][1]
-	} else if IsSymbol(exp) {
-		var err error
-		s, _ := exp.(string)
-		ret, err = env.Find(Symbol(s))
-		if err != nil {
-			panic(err)
-		}
-		return
-	} else if IsSpecialSyntaxExpression(exp, "define") {
-		operators, _ := exp.([]Expression)
-		if len(operators) != 3 {
-			panic("define require 3 arguments")
-		}
-		ret = evalDefine(operators[1], operators[2], env)
-		return
-	} else if IsSpecialSyntaxExpression(exp, "if") {
-		e := exp.([]Expression)
-		return evalIf(e, env)
-	} else if IsSpecialSyntaxExpression(exp, "cond") {
-		return evalCond(exp, env)
-	} else if IsSpecialSyntaxExpression(exp, "begin") {
-		e := exp.([]Expression)
-		return evalBegin(e, env)
-	} else {
-		ops := exp.([]Expression)
-		fn := Eval(ops[0], env)
-		switch p := fn.(type) {
-		case Function:
-			var args []Expression
-			for _, arg := range ops[1:] {
-				args = append(args, Eval(arg, env))
-			}
-			return p(args...)
-		case *LambdaProcess:
-			newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
-			if len(ops[1:]) != len(p.params) {
-				panic("require " + strconv.Itoa(len(p.params)) + "but " + strconv.Itoa(len(ops[1:])) + "provide")
-			}
-			for i, arg := range ops[1:] {
-				newEnv.Set(p.params[i], Eval(arg, env))
-			}
-			return Eval(p.body, newEnv)
-		}
-	}
-	return
 }
 
 func isNullExp(exp Expression) bool {
@@ -176,18 +179,19 @@ func elseExpOfIfExpression(exp []Expression) Expression {
 
 func evalIf(exp []Expression, env *Env) Expression {
 	if IsTrue(Eval(conditionOfIfExpression(exp), env)) {
-		return Eval(trueExpOfIfExpression(exp), env)
+		return trueExpOfIfExpression(exp)
 	} else {
-		return Eval(elseExpOfIfExpression(exp), env)
+		return elseExpOfIfExpression(exp)
 	}
 }
 
 func evalBegin(exp []Expression, env *Env) Expression {
-	var ret Expression
-	for _, e := range exp[1:] {
-		ret = Eval(e, env)
+	//var ret Expression
+	for _, e := range exp[1 : len(exp)-1] {
+		Eval(e, env)
 	}
-	return ret
+	return exp[len(exp)-1]
+	//return ret
 }
 
 func evalCond(exp Expression, env *Env) Expression {
