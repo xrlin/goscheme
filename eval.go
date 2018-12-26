@@ -39,7 +39,6 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 		} else if IsSpecialSyntaxExpression(exp, "if") {
 			e := exp.([]Expression)
 			exp = evalIf(e, env)
-			//return evalIf(e, env)
 		} else if IsSpecialSyntaxExpression(exp, "cond") {
 			return evalCond(exp, env)
 		} else if IsSpecialSyntaxExpression(exp, "begin") {

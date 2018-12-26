@@ -80,8 +80,43 @@ func TestEval(t *testing.T) {
 		ret = Eval(c.input, builtinEnv)
 		assert.Equal(t, c.expected, ret)
 	}
+
+	// test cons
+	//testCases = []struct {
+	//	input    Expression
+	//	expected Expression
+	//}{
+	//	{[]Expression{"cons", "1", "2"}, &Pair{1, 2}},
+	//}
+	//for _, c := range testCases {
+	//	ret = Eval(c.input, builtinEnv)
+	//	assert.Equal(t, c.expected, ret)
+	//}
+	assert.Equal(t, &Pair{Number(1), Number(2)}, Eval([]Expression{"cons", "1", "2"}, builtinEnv))
+
+	//// test list
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, Eval([]Expression{"list", "1", "2"}, builtinEnv))
+	assert.Equal(t, &Pair{Number(1), NilObj}, Eval([]Expression{"list", "1"}, builtinEnv))
+	assert.Equal(t, NilObj, Eval([]Expression{"list"}, builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{&Pair{Number(1), NilObj}, NilObj}}, Eval([]Expression{"list", "1", []Expression{"cons", "1", []Expression{}}}, builtinEnv))
+
+	//// test append
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(append (cons 1 ()) 2)"), builtinEnv))
+	assert.Equal(t, &Pair{Number(2), NilObj}, EvalAll(strToToken("(append () 2)"), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()))"), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), NilObj}, EvalAll(strToToken("(append (cons 1 ()) ())"), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("(append (cons 1 ()) 2 3)"), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()) (cons 3 ()))"), builtinEnv))
+
 }
 
 func TestIsSyntaxExpression(t *testing.T) {
 	assert.Equal(t, true, IsSyntaxExpression([]Expression{"begin"}))
+}
+
+func strToToken(input string) []Expression {
+	tz := NewTokenizerFromString(input)
+	tokens := tz.Tokens()
+	expressions, _ := Parse(&tokens)
+	return expressions
 }

@@ -15,6 +15,8 @@ type String string
 
 type Symbol string
 
+type Quote string
+
 type Boolean bool
 
 type Function func(...Expression) Expression
