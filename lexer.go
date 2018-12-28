@@ -75,7 +75,7 @@ func (t *Tokenizer) readSymbol() (string, bool) {
 }
 
 func isSymbolCh(r rune) bool {
-	return !unicode.IsSpace(r) && !strings.ContainsRune("()", r)
+	return !unicode.IsSpace(r) && !strings.ContainsRune("()'", r)
 }
 
 func (t *Tokenizer) readNextToken() (string, bool) {
@@ -105,6 +105,9 @@ func (t *Tokenizer) readNextToken() (string, bool) {
 		return ")", true
 	} else if isSymbolCh(t.currentCh) {
 		return t.readSymbol()
+	} else if t.currentCh == '\'' {
+		t.readAhead()
+		return "'", true
 	} else {
 		return "", false
 	}
@@ -160,6 +163,12 @@ func readTokens(tokens *[]string) Expression {
 		return ret
 	case ")":
 		panic("syntax error: unexpected ')'")
+	case "'":
+		ret := make([]Expression, 0, 4)
+		ret = append(ret, "quote")
+		nextPart := readTokens(tokens)
+		ret = append(ret, nextPart)
+		return ret
 	default:
 		return token
 	}

@@ -27,7 +27,7 @@ func (n NilType) String() string {
 	return "()"
 }
 
-var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin"}
+var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote"}
 
 var NilObj = NilType{}
 
@@ -88,7 +88,6 @@ func IsSyntaxExpression(exp Expression) bool {
 	for _, s := range syntaxes {
 		if s == operator {
 			return true
-
 		}
 	}
 	return false

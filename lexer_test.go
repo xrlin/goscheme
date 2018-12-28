@@ -26,6 +26,11 @@ func TestTokenize(t *testing.T) {
 					(display x))`, []string{"(", "lambda", "(", "x", "y", ")", "(", "display", "x", ")", ")"}},
 		{"(define (func x) (define (intern x) (x)))",
 			[]string{"(", "define", "(", "func", "x", ")", "(", "define", "(", "intern", "x", ")", "(", "x", ")", ")", ")"}},
+		{"(quote x)", []string{"(", "quote", "x", ")"}},
+		{"'x", []string{"'", "x"}},
+		{"'x()", []string{"'", "x", "(", ")"}},
+		{"' x", []string{"'", "x"}},
+		{"\"'x\"", []string{`"'x"`}},
 	}
 	for _, c := range testCases {
 		assert.Equal(t, c.expected, Tokenize(c.input))
@@ -46,6 +51,11 @@ func TestParse(t *testing.T) {
 		{[]string{"(", "define", "(", "func", "x", ")", "(", "define", "(", "intern", "x", ")", "(", "x", ")", ")", ")"},
 			[]Expression{[]Expression{"define",
 				[]Expression{"func", "x"}, []Expression{"define", []Expression{"intern", "x"}, []Expression{"x"}}}}, nil},
+		// test quote abbreviation
+		{[]string{"'", "x"}, []Expression{[]Expression{"quote", "x"}}, nil},
+		{[]string{"'", "x", "(", ")"}, []Expression{[]Expression{"quote", "x"}, []Expression{}}, nil},
+		{[]string{"'", "(", "x", ")"}, []Expression{[]Expression{"quote", []Expression{"x"}}}, nil},
+		{[]string{"'", "(", "x", ")"}, []Expression{[]Expression{"quote", []Expression{"x"}}}, nil},
 	}
 	for _, c := range testCases {
 		ret, err := Parse(&c.input)

@@ -82,16 +82,16 @@ func TestEval(t *testing.T) {
 	}
 
 	// test cons
-	//testCases = []struct {
-	//	input    Expression
-	//	expected Expression
-	//}{
-	//	{[]Expression{"cons", "1", "2"}, &Pair{1, 2}},
-	//}
-	//for _, c := range testCases {
-	//	ret = Eval(c.input, builtinEnv)
-	//	assert.Equal(t, c.expected, ret)
-	//}
+	testCases = []struct {
+		input    Expression
+		expected Expression
+	}{
+		{[]Expression{"cons", "1", "2"}, &Pair{Number(1), Number(2)}},
+	}
+	for _, c := range testCases {
+		ret = Eval(c.input, builtinEnv)
+		assert.Equal(t, c.expected, ret)
+	}
 	assert.Equal(t, &Pair{Number(1), Number(2)}, Eval([]Expression{"cons", "1", "2"}, builtinEnv))
 
 	//// test list
@@ -108,6 +108,21 @@ func TestEval(t *testing.T) {
 	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("(append (cons 1 ()) 2 3)"), builtinEnv))
 	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()) (cons 3 ()))"), builtinEnv))
 
+	// test quote
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(quote (1 2))"), builtinEnv))
+	assert.Equal(t, Number(1), EvalAll(strToToken("(quote 1)"), builtinEnv))
+	assert.Equal(t, "x", EvalAll(strToToken(`(quote "x")`), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{"x", NilObj}}, EvalAll(strToToken(`(quote (1 "x"))`), builtinEnv))
+	assert.Equal(t, &Pair{Quote("cons"), &Pair{Number(1), &Pair{"x", NilObj}}}, EvalAll(strToToken(`(quote (cons 1 "x"))`), builtinEnv))
+	assert.Equal(t, &Pair{
+		Number(1),
+		&Pair{
+			&Pair{Number(2), &Pair{Number(3), NilObj}}, &Pair{Number(4), NilObj}}},
+		EvalAll(strToToken(`(quote (1 (2 3) 4))`), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("'(1 2)"), builtinEnv))
+	assert.Equal(t, Quote("x"), EvalAll(strToToken("'x"), builtinEnv))
+	assert.Equal(t, &Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("'(cons define 3)"), builtinEnv))
+	assert.Equal(t, &Pair{Quote("quote"), &Pair{&Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, NilObj}}, EvalAll(strToToken("''(cons define 3)"), builtinEnv))
 }
 
 func TestIsSyntaxExpression(t *testing.T) {

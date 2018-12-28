@@ -17,10 +17,7 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 		} else if IsBoolean(exp) {
 			return IsTrue(exp)
 		} else if IsString(exp) {
-			s, _ := exp.(string)
-			pattern := regexp.MustCompile(`"(.*?)"`)
-			m := pattern.FindAllStringSubmatch(s, -1)
-			return m[0][1]
+			return expToString(exp)
 		} else if IsSymbol(exp) {
 			var err error
 			s, _ := exp.(string)
@@ -46,6 +43,9 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			exp = evalBegin(e, env)
 		} else {
 			ops := exp.([]Expression)
+			if isQuoteExpression(exp) {
+				return evalQuote(ops[1], env)
+			}
 			fn := Eval(ops[0], env)
 			switch p := fn.(type) {
 			case Function:
@@ -88,8 +88,38 @@ func isNullExp(exp Expression) bool {
 	}
 }
 
+func expToString(exp Expression) string {
+	s, _ := exp.(string)
+	pattern := regexp.MustCompile(`"(.*?)"`)
+	m := pattern.FindAllStringSubmatch(s, -1)
+	return m[0][1]
+}
+
 func Apply(exp Expression) Expression {
 	return nil
+}
+
+func evalQuote(exp Expression, env *Env) Expression {
+	switch v := exp.(type) {
+	case Number:
+		return v
+	case string:
+		if IsNumber(v) {
+			return expressionToNumber(exp)
+		}
+		if IsString(exp) {
+			return expToString(exp)
+		}
+		return Quote(v)
+	case []Expression:
+		var args []Expression
+		for _, exp := range v {
+			args = append(args, evalQuote(exp, env))
+		}
+		return listImpl(args...)
+	default:
+		panic("invalid quote argument")
+	}
 }
 
 func evalLambda(exp Expression, env *Env) *LambdaProcess {
@@ -104,6 +134,17 @@ func evalLambda(exp Expression, env *Env) *LambdaProcess {
 		paramNames = []Symbol{Symbol(p)}
 	}
 	return makeLambdaProcess(paramNames, body, env)
+}
+
+func isQuoteExpression(exp Expression) bool {
+	if exp == "quote" {
+		return true
+	}
+	ops, ok := exp.([]Expression)
+	if !ok {
+		return false
+	}
+	return ops[0] == "quote"
 }
 
 func evalDefine(s Expression, val Expression, env *Env) Expression {
