@@ -64,6 +64,8 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 				}
 				exp = p.body
 				env = newEnv
+			default:
+				panic(fmt.Sprintf("%v is not callable", fn))
 			}
 		}
 	}
@@ -90,7 +92,7 @@ func isNullExp(exp Expression) bool {
 
 func expToString(exp Expression) string {
 	s, _ := exp.(string)
-	pattern := regexp.MustCompile(`"(.*?)"`)
+	pattern := regexp.MustCompile(`"((.|[\r\n])*?)"`)
 	m := pattern.FindAllStringSubmatch(s, -1)
 	return m[0][1]
 }
@@ -182,6 +184,11 @@ func makeLambdaProcess(paramNames []Symbol, body Expression, env *Env) *LambdaPr
 }
 
 func EvalAll(exps []Expression, env *Env) (ret Expression) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
 	for _, exp := range exps {
 		ret = Eval(exp, env)
 	}

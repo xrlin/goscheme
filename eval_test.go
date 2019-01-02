@@ -50,6 +50,20 @@ func TestEval(t *testing.T) {
 		assert.Equal(t, c.expected, ret)
 	}
 
+	// test string
+	testCases = []struct {
+		input    Expression
+		expected Expression
+	}{
+		{`"test"`, "test"},
+		{"\"test\r\n\"", "test\r\n"},
+		{"\"test\n\"", "test\n"},
+	}
+	for _, c := range testCases {
+		ret = Eval(c.input, builtinEnv)
+		assert.Equal(t, c.expected, ret)
+	}
+
 	// test recursion
 	tz := NewTokenizerFromString(
 		`(define (fact1 n)

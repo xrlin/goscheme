@@ -3,6 +3,7 @@ package goscheme
 import (
 	"fmt"
 	"go/types"
+	"os"
 	"strconv"
 )
 
@@ -29,6 +30,10 @@ func (e *Env) Set(symbol Symbol, value Expression) {
 }
 
 var builtinFuncs = map[Symbol]Function{
+	"exit": Function(func(args ...Expression) Expression {
+		exit <- os.Interrupt
+		return NilObj
+	}),
 	"+": Function(func(args ...Expression) Expression {
 		var ret Number
 		for _, e := range args {

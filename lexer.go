@@ -1,7 +1,7 @@
 package goscheme
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"io"
 	"strings"
@@ -14,14 +14,18 @@ func Tokenize(inputScript string) []string {
 }
 
 type Tokenizer struct {
-	Source       *bytes.Reader
+	Source       *bufio.Reader
 	Eof          bool
 	currentCh    rune
 	currentToken string
 }
 
 func NewTokenizerFromString(input string) *Tokenizer {
-	return &Tokenizer{Source: bytes.NewReader([]byte(input)), currentCh: -1}
+	return &Tokenizer{Source: bufio.NewReader(strings.NewReader(input)), currentCh: -1}
+}
+
+func NewTokenizerFromReader(input io.Reader) *Tokenizer {
+	return &Tokenizer{Source: bufio.NewReader(input), currentCh: -1}
 }
 
 func (t *Tokenizer) readAhead() {

@@ -1,0 +1,12 @@
+(define x 3)
+(display x)
+(define (fact1 n)
+					(if (<= n 0)
+						1
+						(* n (fact1 (- n 1)))))
+				(define (fact2 n) (fact-tail n 1))
+				(define (fact-tail n a)
+						(if (<= n 0)
+							(* 1 a)
+							(fact-tail (- n 1) (* n a))))
+(display (fact1 6))

@@ -41,3 +41,9 @@ func TestPair_String(t *testing.T) {
 		assert.Equal(t, c.Expected, c.Item.String())
 	}
 }
+
+func TestIsString(t *testing.T) {
+	assert.Equal(t, true, IsString("\"sdfsdf\""))
+	assert.Equal(t, true, IsString("\"sdfdsf\n\""))
+	assert.Equal(t, true, IsString("\"sdfdsf\r\n\""))
+}

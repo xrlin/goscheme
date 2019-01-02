@@ -2,6 +2,7 @@ package goscheme
 
 import (
 	"fmt"
+	"go/types"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ var NilObj = NilType{}
 
 type Undef struct{}
 
-func (u *Undef) String() string {
+func (u Undef) String() string {
 	return "<UNDEF>"
 }
 
@@ -58,7 +59,7 @@ func IsNumber(exp Expression) bool {
 func IsString(exp Expression) bool {
 	switch v := exp.(type) {
 	case string:
-		ok, err := regexp.MatchString("\".*\"", v)
+		ok, err := regexp.MatchString("\"(.|[\\r\\n])*\"", v)
 		if ok && err == nil {
 			return true
 		}
@@ -205,4 +206,16 @@ func (p *Pair) String() string {
 	}
 
 	return "(" + strings.Join(strSlices, " ") + ")"
+}
+
+// check the result should print in console
+func shouldPrint(exp Expression) bool {
+	switch exp.(type) {
+	case Undef:
+		return false
+	case types.Nil:
+		return false
+	default:
+		return true
+	}
 }
