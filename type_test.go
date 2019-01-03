@@ -52,3 +52,13 @@ func TestShouldPrint(t *testing.T) {
 	assert.Equal(t, false, shouldPrint(undefObj))
 	assert.Equal(t, false, shouldPrint(nil))
 }
+
+func TestIsTrue(t *testing.T) {
+	assert.Equal(t, true, IsTrue("#t"))
+	assert.Equal(t, false, IsTrue("#f"))
+	assert.Equal(t, true, IsTrue(nil))
+	assert.Equal(t, true, IsTrue(NilObj))
+	assert.Equal(t, true, IsTrue(undefObj))
+	assert.Equal(t, true, IsTrue(1))
+	assert.Equal(t, true, IsTrue(""))
+}

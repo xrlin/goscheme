@@ -112,6 +112,46 @@ var builtinFuncs = map[Symbol]Function{
 		fmt.Printf("%v\n", args[0])
 		return undefObj
 	}),
+	"true?": Function(func(args ...Expression) Expression {
+		if len(args) != 1 {
+			panic("true? require 1 argument")
+		}
+		return IsTrue(args[0])
+	}),
+	"null?": Function(func(args ...Expression) Expression {
+		if len(args) != 1 {
+			panic("null? require 1 argument")
+		}
+		return isNullExp(args[0])
+	}),
+	"not": Function(func(args ...Expression) Expression {
+		if len(args) != 1 {
+			panic("not require 1 argument")
+		}
+		return !IsTrue(args[0])
+	}),
+	"and": Function(func(args ...Expression) Expression {
+		if len(args) == 0 {
+			panic("and require more than 1 arguments")
+		}
+		for _, exp := range args {
+			if !IsTrue(exp) {
+				return false
+			}
+		}
+		return true
+	}),
+	"or": Function(func(args ...Expression) Expression {
+		if len(args) == 0 {
+			panic("or require more than 1 arguments")
+		}
+		for _, exp := range args {
+			if IsTrue(exp) {
+				return true
+			}
+		}
+		return false
+	}),
 	"cons":   Function(consImpl),
 	"car":    Function(carImpl),
 	"cdr":    Function(cdrImpl),

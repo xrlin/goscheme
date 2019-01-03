@@ -14,6 +14,10 @@ type Number float64
 
 type String string
 
+func (s String) String() string {
+	return "\"" + string(s) + "\""
+}
+
 type Symbol string
 
 type Quote string
@@ -68,6 +72,8 @@ func IsString(exp Expression) bool {
 			return true
 		}
 		return false
+	case String:
+		return true
 	default:
 		return false
 	}
@@ -120,17 +126,12 @@ func IsBoolean(exp Expression) bool {
 	return exp == "#t" || exp == "#f"
 }
 
+// IsTrue check whether the condition is true. Return false when exp is #f or false, otherwise return true
 func IsTrue(exp Expression) bool {
-	if !IsBoolean(exp) {
+	if exp == "#f" || exp == false {
 		return false
 	}
-	if exp == true {
-		return true
-	}
-	if exp == "#t" {
-		return true
-	}
-	return false
+	return true
 }
 
 func IsNilObj(obj Expression) bool {

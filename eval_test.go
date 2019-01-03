@@ -43,7 +43,7 @@ func TestEval(t *testing.T) {
 		{[]Expression{"cond", []Expression{"#t", "1", "2"}}, Number(2)},
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}}, NilObj},
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"#t", "2"}}, Number(2)},
-		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"else", `"else clause"`}}, `else clause`},
+		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"else", `"else clause"`}}, String(`else clause`)},
 	}
 	for _, c := range testCases {
 		ret = Eval(c.input, builtinEnv)
@@ -55,9 +55,9 @@ func TestEval(t *testing.T) {
 		input    Expression
 		expected Expression
 	}{
-		{`"test"`, "test"},
-		{"\"test\r\n\"", "test\r\n"},
-		{"\"test\n\"", "test\n"},
+		{`"test"`, String("test")},
+		{"\"test\r\n\"", String("test\r\n")},
+		{"\"test\n\"", String("test\n")},
 	}
 	for _, c := range testCases {
 		ret = Eval(c.input, builtinEnv)
@@ -128,9 +128,9 @@ func TestEval(t *testing.T) {
 	// test quote
 	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(quote (1 2))"), builtinEnv))
 	assert.Equal(t, Number(1), EvalAll(strToToken("(quote 1)"), builtinEnv))
-	assert.Equal(t, "x", EvalAll(strToToken(`(quote "x")`), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{"x", NilObj}}, EvalAll(strToToken(`(quote (1 "x"))`), builtinEnv))
-	assert.Equal(t, &Pair{Quote("cons"), &Pair{Number(1), &Pair{"x", NilObj}}}, EvalAll(strToToken(`(quote (cons 1 "x"))`), builtinEnv))
+	assert.Equal(t, String("x"), EvalAll(strToToken(`(quote "x")`), builtinEnv))
+	assert.Equal(t, &Pair{Number(1), &Pair{String("x"), NilObj}}, EvalAll(strToToken(`(quote (1 "x"))`), builtinEnv))
+	assert.Equal(t, &Pair{Quote("cons"), &Pair{Number(1), &Pair{String("x"), NilObj}}}, EvalAll(strToToken(`(quote (cons 1 "x"))`), builtinEnv))
 	assert.Equal(t, &Pair{
 		Number(1),
 		&Pair{

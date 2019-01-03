@@ -82,6 +82,8 @@ func isNullExp(exp Expression) bool {
 		return true
 	case Undef:
 		return true
+	case *Pair:
+		return e.IsNull()
 	case []Expression:
 		if len(e) == 0 {
 			return true
@@ -97,11 +99,11 @@ func isLambdaType(expression Expression) bool {
 	return ok
 }
 
-func expToString(exp Expression) string {
+func expToString(exp Expression) String {
 	s, _ := exp.(string)
 	pattern := regexp.MustCompile(`"((.|[\r\n])*?)"`)
 	m := pattern.FindAllStringSubmatch(s, -1)
-	return m[0][1]
+	return String(m[0][1])
 }
 
 func Apply(exp Expression) Expression {
