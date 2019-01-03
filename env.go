@@ -312,6 +312,11 @@ const builtinProcedures = `
   (if (null? items)
       0
       (proc (car items) (reduce proc (cdr items)))))
+
+(define (remainder a b)
+  (if (< a b)
+      a
+      (remainder (- a b) b)))
 `
 
 func loadBuiltinProcedures(env *Env) {
