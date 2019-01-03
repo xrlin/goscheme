@@ -96,10 +96,34 @@ var builtinFuncs = map[Symbol]Function{
 		}
 		return false
 	}),
+	"<": Function(func(args ...Expression) Expression {
+		op1 := expressionToNumber(args[0])
+		op2 := expressionToNumber(args[1])
+		if op1 < op2 {
+			return true
+		}
+		return false
+	}),
+	">": Function(func(args ...Expression) Expression {
+		op1 := expressionToNumber(args[0])
+		op2 := expressionToNumber(args[1])
+		if op1 > op2 {
+			return true
+		}
+		return false
+	}),
 	"<=": Function(func(args ...Expression) Expression {
 		op1 := expressionToNumber(args[0])
 		op2 := expressionToNumber(args[1])
 		if op1 <= op2 {
+			return true
+		}
+		return false
+	}),
+	">=": Function(func(args ...Expression) Expression {
+		op1 := expressionToNumber(args[0])
+		op2 := expressionToNumber(args[1])
+		if op1 >= op2 {
 			return true
 		}
 		return false
@@ -115,7 +139,13 @@ var builtinFuncs = map[Symbol]Function{
 		return undefObj
 	}),
 	"displayln": Function(func(args ...Expression) Expression {
-		fmt.Printf("%v\n", args[0])
+		exp := args[0]
+		switch v := exp.(type) {
+		case String:
+			fmt.Println(string(v))
+		default:
+			fmt.Printf("%v\n", v)
+		}
 		return undefObj
 	}),
 	"true?": Function(func(args ...Expression) Expression {
@@ -129,6 +159,10 @@ var builtinFuncs = map[Symbol]Function{
 			panic("null? require 1 argument")
 		}
 		return isNullExp(args[0])
+	}),
+	"string?": Function(func(args ...Expression) Expression {
+		exp := args[0]
+		return IsString(exp)
 	}),
 	"not": Function(func(args ...Expression) Expression {
 		if len(args) != 1 {
@@ -163,6 +197,9 @@ var builtinFuncs = map[Symbol]Function{
 	"cdr":    Function(cdrImpl),
 	"list":   Function(listImpl),
 	"append": Function(appendImpl),
+	//"eval": Function(func(args ...Expression) Expression {
+	//	return EvalAll(args)
+	//})
 }
 
 func consImpl(args ...Expression) Expression {
@@ -251,5 +288,35 @@ func setupBuiltinEnv() *Env {
 	for k, fn := range builtinFuncs {
 		builtinEnv.Set(k, fn)
 	}
+	loadBuiltinProcedures(builtinEnv)
 	return builtinEnv
+}
+
+const builtinProcedures = `
+(define (map procedure list-arguments)
+	(cond
+		((null? list-arguments) '())
+		(else 
+			(cons (procedure (car list-arguments)) 
+					(map procedure 
+							(cdr list-arguments))))))
+
+(define (filter predicate sequence)
+  (cond ((null? sequence) '())
+        ((predicate (car sequence))
+         (cons (car sequence)
+               (filter predicate (cdr sequence))))
+        (else (filter predicate (cdr sequence)))))
+
+(define (reduce proc items)
+  (if (null? items)
+      0
+      (proc (car items) (reduce proc (cdr items)))))
+`
+
+func loadBuiltinProcedures(env *Env) {
+	t := NewTokenizerFromString(builtinProcedures)
+	tokens := t.Tokens()
+	expressions, _ := Parse(&tokens)
+	EvalAll(expressions, env)
 }

@@ -13,6 +13,7 @@ import (
 var exit = make(chan os.Signal, 1)
 
 // return the indents current input string should add
+// if result > 0 missing ) , if result < 0 missing (, if result == 0 syntax check passed.
 func neededIndents(reader io.RuneReader) int {
 	stack := make([]rune, 0, 3)
 
@@ -20,6 +21,9 @@ func neededIndents(reader io.RuneReader) int {
 		if ch == '(' {
 			stack = append(stack, ch)
 		} else if ch == ')' {
+			if len(stack)-1 < 0 {
+				return len(stack) - 1
+			}
 			stack = stack[:len(stack)-1]
 		}
 		ch, _, err = reader.ReadRune()
@@ -97,8 +101,13 @@ func (i *Interpreter) check() {
 	}()
 
 	reader := bufio.NewReader(teeReader)
-	if neededIndents(reader) != 0 {
-		fmt.Println("syntax error: missing )")
+	indents := neededIndents(reader)
+	if indents != 0 {
+		if indents < 0 {
+			fmt.Println("syntax error: missing (")
+		} else {
+			fmt.Println("syntax error: missing )")
+		}
 		i.exit <- os.Interrupt
 	}
 }
@@ -163,7 +172,7 @@ func (i *Interpreter) evalPromptInput(input string) {
 	i.currentLineScript = []byte(input)
 	i.currentFragment = append(i.currentFragment, '\n')
 	i.currentFragment = append(i.currentFragment, i.currentLineScript...)
-	if i.indents() == 0 {
+	if i.indents() <= 0 {
 		tokenizer := NewTokenizerFromReader(bytes.NewReader(i.currentFragment))
 		tokens := tokenizer.Tokens()
 		expTokens, err := Parse(&tokens)
