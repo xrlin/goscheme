@@ -41,6 +41,8 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 		} else if IsSpecialSyntaxExpression(exp, "begin") {
 			e := exp.([]Expression)
 			exp = evalBegin(e, env)
+		} else if IsSpecialSyntaxExpression(exp, "lambda") {
+			return evalLambda(exp, env)
 		} else {
 			ops := exp.([]Expression)
 			if isQuoteExpression(exp) {
@@ -57,7 +59,7 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			case *LambdaProcess:
 				newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
 				if len(ops[1:]) != len(p.params) {
-					panic("require " + strconv.Itoa(len(p.params)) + "but " + strconv.Itoa(len(ops[1:])) + "provide")
+					panic("require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(ops[1:])) + " provide")
 				}
 				for i, arg := range ops[1:] {
 					newEnv.Set(p.params[i], Eval(arg, env))
@@ -88,6 +90,11 @@ func isNullExp(exp Expression) bool {
 	default:
 		return false
 	}
+}
+
+func isLambdaType(expression Expression) bool {
+	_, ok := expression.(*LambdaProcess)
+	return ok
 }
 
 func expToString(exp Expression) string {
@@ -130,10 +137,12 @@ func evalLambda(exp Expression, env *Env) *LambdaProcess {
 	body := se[2]
 	var paramNames []Symbol
 	switch p := paramOperand.(type) {
-	case []string:
-		paramNames = getParamSymbols(p)
-	case string:
-		paramNames = []Symbol{Symbol(p)}
+	case []Expression:
+		for _, e := range p {
+			paramNames = append(paramNames, transExpressionToSymbol(e))
+		}
+	case Expression:
+		paramNames = []Symbol{transExpressionToSymbol(p)}
 	}
 	return makeLambdaProcess(paramNames, body, env)
 }

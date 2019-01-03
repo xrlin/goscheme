@@ -108,6 +108,10 @@ var builtinFuncs = map[Symbol]Function{
 		fmt.Printf("%v", args[0])
 		return undefObj
 	}),
+	"displayln": Function(func(args ...Expression) Expression {
+		fmt.Printf("%v\n", args[0])
+		return undefObj
+	}),
 	"cons":   Function(consImpl),
 	"car":    Function(carImpl),
 	"cdr":    Function(cdrImpl),

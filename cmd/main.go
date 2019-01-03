@@ -13,14 +13,14 @@ func main() {
 	}
 	var interpreter *goscheme.Interpreter
 	if filePath == "" {
-		interpreter = goscheme.NewInterpreter(os.Stdin, goscheme.Interactive)
+		interpreter = goscheme.NewREPLInterpreter()
 	} else {
 		file, err := os.Open(filePath)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		interpreter = goscheme.NewInterpreter(file, goscheme.NoneInteractive)
+		interpreter = goscheme.NewFileInterpreter(file)
 	}
 	interpreter.Run()
 }

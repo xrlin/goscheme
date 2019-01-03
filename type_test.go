@@ -47,3 +47,8 @@ func TestIsString(t *testing.T) {
 	assert.Equal(t, true, IsString("\"sdfdsf\n\""))
 	assert.Equal(t, true, IsString("\"sdfdsf\r\n\""))
 }
+
+func TestShouldPrint(t *testing.T) {
+	assert.Equal(t, false, shouldPrint(undefObj))
+	assert.Equal(t, false, shouldPrint(nil))
+}

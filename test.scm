@@ -1,5 +1,5 @@
 (define x 3)
-(display x)
+(displayln x)
 (define (fact1 n)
 					(if (<= n 0)
 						1
@@ -9,4 +9,4 @@
 						(if (<= n 0)
 							(* 1 a)
 							(fact-tail (- n 1) (* n a))))
-(display (fact1 6))
+(displayln (fact1 6))

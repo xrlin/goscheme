@@ -64,6 +64,9 @@ func TestEval(t *testing.T) {
 		assert.Equal(t, c.expected, ret)
 	}
 
+	// test lambda
+	assert.Equal(t, Number(3), EvalAll(strToToken("((lambda (x y) (+ x y)) 1 2)"), builtinEnv))
+
 	// test recursion
 	tz := NewTokenizerFromString(
 		`(define (fact1 n)

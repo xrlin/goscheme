@@ -1,8 +1,8 @@
 package goscheme
 
 import (
+	"bytes"
 	"fmt"
-	"go/types"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +21,10 @@ type Quote string
 type Boolean bool
 
 type Function func(...Expression) Expression
+
+func (f Function) String() string {
+	return "built in function"
+}
 
 type NilType struct{}
 
@@ -99,6 +103,9 @@ func IsSymbol(expression Expression) bool {
 	if ok {
 		return false
 	}
+	if _, ok := expression.(string); !ok {
+		return false
+	}
 	if IsNumber(expression) || IsString(expression) || IsBoolean(expression) || IsSyntaxExpression(expression) {
 		return false
 	}
@@ -148,6 +155,39 @@ type LambdaProcess struct {
 	params []Symbol
 	body   Expression
 	env    *Env
+}
+
+func (lambda *LambdaProcess) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("(lambda (")
+	for i, k := range lambda.params {
+		buf.WriteString(string(k))
+		if i != len(k)-1 {
+			buf.WriteString(" ")
+		}
+	}
+	buf.WriteString(") ")
+	buf.WriteString(concactLambdaBodyToString(lambda.body))
+	buf.WriteString(")")
+	return buf.String()
+}
+
+func concactLambdaBodyToString(exp Expression) string {
+	var buf bytes.Buffer
+	switch v := exp.(type) {
+	case []Expression:
+		buf.WriteString("(")
+		for i, exp := range v {
+			buf.WriteString(concactLambdaBodyToString(exp))
+			if i != len(v)-1 {
+				buf.WriteString(" ")
+			}
+		}
+		buf.WriteString(")")
+	default:
+		buf.WriteString(fmt.Sprintf("%s", exp))
+	}
+	return buf.String()
 }
 
 func (lambda *LambdaProcess) call(env *Env, args ...Expression) Expression {
@@ -210,10 +250,11 @@ func (p *Pair) String() string {
 
 // check the result should print in console
 func shouldPrint(exp Expression) bool {
+	if exp == nil {
+		return false
+	}
 	switch exp.(type) {
 	case Undef:
-		return false
-	case types.Nil:
 		return false
 	default:
 		return true
