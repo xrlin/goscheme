@@ -173,7 +173,7 @@ func (i *Interpreter) evalPromptInput(input string) {
 		}
 		ret := EvalAll(expTokens, i.env)
 		if shouldPrint(ret) {
-			fmt.Println(ret)
+			fmt.Println(toString(ret))
 		}
 		i.currentFragment = make([]byte, 0, 10)
 	}

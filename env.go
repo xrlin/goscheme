@@ -105,7 +105,13 @@ var builtinFuncs = map[Symbol]Function{
 		return false
 	}),
 	"display": Function(func(args ...Expression) Expression {
-		fmt.Printf("%v", args[0])
+		exp := args[0]
+		switch v := exp.(type) {
+		case String:
+			fmt.Print(string(v))
+		default:
+			fmt.Printf("%v", v)
+		}
 		return undefObj
 	}),
 	"displayln": Function(func(args ...Expression) Expression {

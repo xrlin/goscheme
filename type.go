@@ -261,3 +261,19 @@ func shouldPrint(exp Expression) bool {
 		return true
 	}
 }
+
+// Output string in interactive console that represents the expression value.
+func toString(exp Expression) string {
+	switch v := exp.(type) {
+	case bool:
+		if v == false {
+			return "#f"
+		}
+		if v == true {
+			return "#t"
+		}
+	default:
+		return fmt.Sprintf("%v", exp)
+	}
+	return fmt.Sprintf("%v", exp)
+}
