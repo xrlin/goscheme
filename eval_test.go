@@ -41,7 +41,7 @@ func TestEval(t *testing.T) {
 		expected Expression
 	}{
 		{[]Expression{"cond", []Expression{"#t", "1", "2"}}, Number(2)},
-		{[]Expression{"cond", []Expression{"#f", "1", "2"}}, NilObj},
+		{[]Expression{"cond", []Expression{"#f", "1", "2"}}, undefObj},
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"#t", "2"}}, Number(2)},
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"else", `"else clause"`}}, String(`else clause`)},
 	}
@@ -140,6 +140,74 @@ func TestEval(t *testing.T) {
 	assert.Equal(t, Quote("x"), EvalAll(strToToken("'x"), builtinEnv))
 	assert.Equal(t, &Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("'(cons define 3)"), builtinEnv))
 	assert.Equal(t, &Pair{Quote("quote"), &Pair{&Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, NilObj}}, EvalAll(strToToken("''(cons define 3)"), builtinEnv))
+}
+
+// test built in procedures
+func TestEval2(t *testing.T) {
+	env := setupBuiltinEnv()
+	EvalAll(strToToken(`(display-pascal-indents 3 1)`), env)
+}
+
+// test comment
+func TestEval3(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected Expression
+	}{
+		{`
+				;comment
+				3`, Number(3)},
+		{`
+				;comment
+				3
+				;comment`, Number(3)},
+		{`
+				; comment
+				(define x 3)
+				; comment 2
+				x`, Number(3)},
+		{`
+				;comment
+				(define (func ; comment
+						 x)
+					x)
+				(func 3)`, Number(3)},
+		{`
+				;comment
+				(define (func ; comment
+						 x)
+					x)
+				(func ";not a comment#f\n")`, String(";not a comment#f\n")},
+	}
+	env := setupBuiltinEnv()
+	for _, c := range testCases {
+		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+	}
+}
+
+// test eval/apply/load syntax
+func TestEval4(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected Expression
+	}{
+		{`(eval 3)`, Number(3)},
+		{`(eval '3)`, Number(3)},
+		{`(eval '(begin (display "") 3))`, Number(3)},
+		{`(apply display '(3))`, undefObj},
+		{`(apply (lambda x x) '(3))`, Number(3)},
+		{`(apply (lambda (x y) (+ x y)) '(3 4))`, Number(7)},
+	}
+	env := setupBuiltinEnv()
+	for _, c := range testCases {
+		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+	}
+	// test nothing panic
+	assert.Equal(t, undefObj, Eval([]Expression{"load", "\"test.scm\""}, env))
+	assert.Equal(t, undefObj, Eval([]Expression{"load", "\"test\""}, env))
+	assert.Equal(t, undefObj, Eval([]Expression{"load", []Expression{"quote", []Expression{"test.scm"}}}, env))
+	_, err := env.Find("test-method")
+	assert.Nil(t, err)
 }
 
 func TestIsSyntaxExpression(t *testing.T) {

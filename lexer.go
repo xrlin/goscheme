@@ -49,6 +49,8 @@ func (t *Tokenizer) readString() (string, bool) {
 			t.readAhead()
 			if t.currentCh == 'n' {
 				buf = append(buf, '\n')
+			} else if t.currentCh == 't' {
+				buf = append(buf, '\t')
 			} else {
 				buf = append(buf, t.currentCh)
 			}
@@ -82,7 +84,20 @@ func isSymbolCh(r rune) bool {
 	return !unicode.IsSpace(r) && !strings.ContainsRune("()'", r)
 }
 
+func (t *Tokenizer) skipComment() {
+	for t.currentCh == ';' {
+		for t.currentCh != '\n' {
+			t.readAhead()
+			if t.Eof {
+				return
+			}
+		}
+		t.readAhead()
+	}
+}
+
 func (t *Tokenizer) readNextToken() (string, bool) {
+
 	if t.Eof {
 		t.currentCh = 0
 		t.currentToken = ""
@@ -99,6 +114,10 @@ func (t *Tokenizer) readNextToken() (string, bool) {
 		}
 	}
 
+	if t.currentCh == ';' {
+		t.skipComment()
+		return t.readNextToken()
+	}
 	if t.currentCh == '"' {
 		return t.readString()
 	} else if t.currentCh == '(' {

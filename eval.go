@@ -2,6 +2,8 @@ package goscheme
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"regexp"
 	"strconv"
 )
@@ -10,6 +12,9 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 	for {
 		if isNullExp(exp) {
 			return NilObj
+		}
+		if isUndefObj(exp) {
+			return undefObj
 		}
 		if IsNumber(exp) {
 			ret = expressionToNumber(exp)
@@ -33,6 +38,12 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			}
 			ret = evalDefine(operators[1], operators[2], env)
 			return
+		} else if IsSpecialSyntaxExpression(exp, "eval") {
+			exps, _ := exp.([]Expression)
+			exp = applyEval(exps[1], env)
+		} else if IsSpecialSyntaxExpression(exp, "apply") {
+			exps, _ := exp.([]Expression)
+			return evalApply(exps[1:], env)
 		} else if IsSpecialSyntaxExpression(exp, "if") {
 			e := exp.([]Expression)
 			exp = evalIf(e, env)
@@ -43,8 +54,15 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			exp = evalBegin(e, env)
 		} else if IsSpecialSyntaxExpression(exp, "lambda") {
 			return evalLambda(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "load") {
+			exps := exp.([]Expression)
+			return evalLoad(exps[1], env)
 		} else {
-			ops := exp.([]Expression)
+			ops, ok := exp.([]Expression)
+			if !ok {
+				// exp is just a bottom builtin type, return it directly
+				return exp
+			}
 			if isQuoteExpression(exp) {
 				return evalQuote(ops[1], env)
 			}
@@ -59,7 +77,7 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			case *LambdaProcess:
 				newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
 				if len(ops[1:]) != len(p.params) {
-					panic("require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(ops[1:])) + " provide")
+					panic(fmt.Sprintf("%v\n", p.String()) + "require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(ops[1:])) + " provide")
 				}
 				for i, arg := range ops[1:] {
 					newEnv.Set(p.params[i], Eval(arg, env))
@@ -79,8 +97,6 @@ func isNullExp(exp Expression) bool {
 	}
 	switch e := exp.(type) {
 	case NilType:
-		return true
-	case Undef:
 		return true
 	case *Pair:
 		return e.IsNull()
@@ -108,6 +124,70 @@ func expToString(exp Expression) String {
 
 func Apply(exp Expression) Expression {
 	return nil
+}
+
+func applyEval(exp Expression, env *Env) Expression {
+	switch v := exp.(type) {
+	case []Expression:
+		if isQuoteExpression(v) {
+			return v[1]
+		}
+		return v[0]
+	default:
+		return v
+	}
+}
+
+func evalApply(exp Expression, env *Env) Expression {
+	args, ok := exp.([]Expression)
+	if !ok || len(args) != 2 {
+		panic("apply require 2 arguments")
+	}
+	procedure, arg := Eval(args[0], env), Eval(args[1], env)
+	if !isList(arg) {
+		panic("argument must be a list")
+	}
+	argList := arg.(*Pair)
+	var argSlice = make([]Expression, 0, 1)
+	argSlice = append(argSlice, extractList(argList)...)
+	var expression []Expression
+	expression = append(expression, procedure)
+	expression = append(expression, argSlice...)
+	return Eval(expression, env)
+}
+
+// load other scheme script file
+func evalLoad(exp Expression, env *Env) Expression {
+	argValue := Eval(exp, env)
+	switch v := argValue.(type) {
+	case String:
+		loadFile(string(v), env)
+	case Quote:
+		loadFile(string(v), env)
+	case *Pair:
+		if isList(v) {
+			expressions := extractList(v)
+			for _, p := range expressions {
+				evalLoad(p, env)
+			}
+		}
+	default:
+		panic("argument can only contains string, quote or list")
+	}
+	return undefObj
+}
+
+func loadFile(filePath string, env *Env) {
+	ext := path.Ext(filePath)
+	if ext != "scm" {
+		filePath += ".scm"
+	}
+	f, err := os.Open(filePath)
+	if err != nil {
+		fmt.Printf("load %s failed: %s\n", filePath, err)
+	}
+	i := NewFileInterpreterWithEnv(f, env)
+	i.Run()
 }
 
 func evalQuote(exp Expression, env *Env) Expression {
@@ -229,7 +309,7 @@ func trueExpOfIfExpression(exp []Expression) Expression {
 }
 
 func elseExpOfIfExpression(exp []Expression) Expression {
-	if len(exp) < 3 {
+	if len(exp) < 4 {
 		return undefObj
 	}
 	return exp[3]

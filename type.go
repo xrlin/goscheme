@@ -36,7 +36,7 @@ func (n NilType) String() string {
 	return "()"
 }
 
-var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote"}
+var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote", "eval", "apply", "load"}
 
 var NilObj = NilType{}
 
@@ -44,6 +44,20 @@ type Undef struct{}
 
 func (u Undef) String() string {
 	return "<UNDEF>"
+}
+
+func extractList(expression Expression) (ret []Expression) {
+	if !isList(expression) {
+		return
+	}
+	switch v := expression.(type) {
+	case *Pair:
+		ret = append(ret, v.Car)
+		ret = append(ret, extractList(v.Cdr)...)
+		return
+	default:
+		return
+	}
 }
 
 var undefObj = Undef{}
@@ -137,6 +151,15 @@ func IsTrue(exp Expression) bool {
 func IsNilObj(obj Expression) bool {
 	switch obj.(type) {
 	case NilType:
+		return true
+	default:
+		return false
+	}
+}
+
+func isUndefObj(obj Expression) bool {
+	switch obj.(type) {
+	case Undef:
 		return true
 	default:
 		return false

@@ -134,7 +134,7 @@ var builtinFuncs = map[Symbol]Function{
 		case String:
 			fmt.Print(string(v))
 		default:
-			fmt.Printf("%v", v)
+			fmt.Printf("%v", toString(v))
 		}
 		return undefObj
 	}),
@@ -144,7 +144,7 @@ var builtinFuncs = map[Symbol]Function{
 		case String:
 			fmt.Println(string(v))
 		default:
-			fmt.Printf("%v\n", v)
+			fmt.Printf("%v\n", toString(v))
 		}
 		return undefObj
 	}),
@@ -192,14 +192,48 @@ var builtinFuncs = map[Symbol]Function{
 		}
 		return false
 	}),
-	"cons":   Function(consImpl),
-	"car":    Function(carImpl),
-	"cdr":    Function(cdrImpl),
-	"list":   Function(listImpl),
-	"append": Function(appendImpl),
-	//"eval": Function(func(args ...Expression) Expression {
-	//	return EvalAll(args)
-	//})
+	"cons":     Function(consImpl),
+	"car":      Function(carImpl),
+	"cdr":      Function(cdrImpl),
+	"list":     Function(listImpl),
+	"append":   Function(appendImpl),
+	"set-car!": Function(setCarImpl),
+	"set-cdr!": Function(setCdrImpl),
+	"concat": Function(func(args ...Expression) Expression {
+		var ret String
+		for _, arg := range args {
+			s, ok := arg.(String)
+			if !ok {
+				panic(fmt.Sprintf("argument %v is not a String", arg))
+			}
+			ret += s
+		}
+		return ret
+	}),
+}
+
+func setCarImpl(args ...Expression) Expression {
+	exp := args[0]
+	newValue := args[1]
+	switch p := exp.(type) {
+	case *Pair:
+		p.Car = newValue
+	default:
+		panic(fmt.Sprintf("%v is not a pair", exp))
+	}
+	return undefObj
+}
+
+func setCdrImpl(args ...Expression) Expression {
+	exp := args[0]
+	newValue := args[1]
+	switch p := exp.(type) {
+	case *Pair:
+		p.Cdr = newValue
+	default:
+		panic(fmt.Sprintf("%v is not a pair", exp))
+	}
+	return undefObj
 }
 
 func consImpl(args ...Expression) Expression {
@@ -317,6 +351,23 @@ const builtinProcedures = `
   (if (< a b)
       a
       (remainder (- a b) b)))
+
+(define list-ref
+    (lambda (lst place)
+      (if (null? lst)
+          '()
+          (if (= place 0)
+          (car lst)
+          (list-ref (cdr lst) (- place 1))))))
+
+(define (list-set! list k val)
+    (if (= k 0)
+        (set-car! list val)
+        (list-set! (cdr list) (- k 1) val)))
+
+(define (list-length lst)
+	(if (null? lst) 0 (+ (list-length (cdr lst)) 1)))
+
 `
 
 func loadBuiltinProcedures(env *Env) {

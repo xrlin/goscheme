@@ -193,6 +193,10 @@ func NewFileInterpreter(reader io.Reader) *Interpreter {
 	return &Interpreter{input: reader, exit: exit, mode: NoneInteractive, env: setupBuiltinEnv()}
 }
 
+func NewFileInterpreterWithEnv(reader io.Reader, env *Env) *Interpreter {
+	return &Interpreter{input: reader, exit: exit, mode: NoneInteractive, env: env}
+}
+
 func NewREPLInterpreter() *Interpreter {
 	i := &Interpreter{exit: exit, mode: Interactive, env: setupBuiltinEnv()}
 	i.initPromote()
