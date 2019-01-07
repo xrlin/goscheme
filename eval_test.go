@@ -194,6 +194,20 @@ func TestEval4(t *testing.T) {
 		{`(eval 3)`, Number(3)},
 		{`(eval '3)`, Number(3)},
 		{`(eval '(begin (display "") 3))`, Number(3)},
+		{`
+			(define fn '*)
+(define x 3)
+(define y (list '+ x 5))
+(define z (list fn 10 y))
+(eval y)`, Number(8)},
+		{`
+			(define fn '*)
+(define x 3)
+(define y (list '+ x 5))
+(define z (list fn 10 y))
+(eval z)`, Number(80)},
+		{`(define x 3) (eval 'x)`, Number(3)},
+		{`(define x 3) (eval ''x)`, Quote("x")},
 		{`(apply display '(3))`, undefObj},
 		{`(apply (lambda x x) '(3))`, Number(3)},
 		{`(apply (lambda (x y) (+ x y)) '(3 4))`, Number(7)},

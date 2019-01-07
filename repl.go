@@ -169,6 +169,12 @@ func (i *Interpreter) initPromote() {
 }
 
 func (i *Interpreter) evalPromptInput(input string) {
+	// after each exec should init the interpreter status
+	defer func() {
+		i.currentLineScript = make([]byte, 0, 10)
+		i.currentFragment = make([]byte, 0, 10)
+	}()
+
 	i.currentLineScript = []byte(input)
 	i.currentFragment = append(i.currentFragment, '\n')
 	i.currentFragment = append(i.currentFragment, i.currentLineScript...)

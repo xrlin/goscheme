@@ -40,7 +40,7 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			return
 		} else if IsSpecialSyntaxExpression(exp, "eval") {
 			exps, _ := exp.([]Expression)
-			exp = applyEval(exps[1], env)
+			return evalEval(exps[1], env)
 		} else if IsSpecialSyntaxExpression(exp, "apply") {
 			exps, _ := exp.([]Expression)
 			return evalApply(exps[1:], env)
@@ -126,15 +126,30 @@ func Apply(exp Expression) Expression {
 	return nil
 }
 
-func applyEval(exp Expression, env *Env) Expression {
-	switch v := exp.(type) {
-	case []Expression:
-		if isQuoteExpression(v) {
-			return v[1]
+func evalEval(exp Expression, env *Env) Expression {
+	arg := Eval(exp, env)
+	if !validEvalExp(arg) {
+		panic("error: malformed list")
+	}
+	expStr := toString(arg)
+	t := NewTokenizerFromString(expStr)
+	tokens := t.Tokens()
+	ret, err := Parse(&tokens)
+	if err != nil {
+		panic(err)
+	}
+	return EvalAll(ret, env)
+}
+
+func validEvalExp(exp Expression) bool {
+	switch p := exp.(type) {
+	case *Pair:
+		if !p.IsList() {
+			return false
 		}
-		return v[0]
+		return validEvalExp(p.Car) && validEvalExp(p.Cdr)
 	default:
-		return v
+		return true
 	}
 }
 
@@ -179,7 +194,7 @@ func evalLoad(exp Expression, env *Env) Expression {
 
 func loadFile(filePath string, env *Env) {
 	ext := path.Ext(filePath)
-	if ext != "scm" {
+	if ext != ".scm" {
 		filePath += ".scm"
 	}
 	f, err := os.Open(filePath)

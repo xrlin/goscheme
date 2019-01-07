@@ -27,7 +27,7 @@ type Boolean bool
 type Function func(...Expression) Expression
 
 func (f Function) String() string {
-	return "built in function"
+	return "#[BuiltinFunction]"
 }
 
 type NilType struct{}
