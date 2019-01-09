@@ -73,7 +73,7 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 				for _, arg := range ops[1:] {
 					args = append(args, Eval(arg, env))
 				}
-				return p(args...)
+				return p.Call(args...)
 			case *LambdaProcess:
 				newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
 				if len(ops[1:]) != len(p.params) {

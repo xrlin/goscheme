@@ -29,187 +29,201 @@ func (e *Env) Set(symbol Symbol, value Expression) {
 	e.frame[symbol] = value
 }
 
-var builtinFuncs = map[Symbol]Function{
-	"exit": Function(func(args ...Expression) Expression {
-		exit <- os.Interrupt
-		return NilObj
-	}),
-	"+": Function(func(args ...Expression) Expression {
-		var ret Number
-		for _, e := range args {
-			if !IsNumber(e) {
-				panic(fmt.Sprintf("%v is not a number", e))
-			}
+func exitFunc(args ...Expression) Expression {
+	exit <- os.Interrupt
+	return NilObj
+}
+
+func addFunc(args ...Expression) Expression {
+	var ret Number
+	for _, e := range args {
+		if !IsNumber(e) {
+			panic(fmt.Sprintf("%v is not a number", e))
 		}
-		for _, arg := range args {
-			ret = ret + expressionToNumber(arg)
+	}
+	for _, arg := range args {
+		ret = ret + expressionToNumber(arg)
+	}
+	return ret
+}
+
+func minusFunc(args ...Expression) Expression {
+	var ret Number
+	for _, e := range args {
+		if !IsNumber(e) {
+			panic(fmt.Sprintf("%v is not a number", e))
 		}
-		return ret
-	}),
-	"-": Function(func(args ...Expression) Expression {
-		var ret Number
-		for _, e := range args {
-			if !IsNumber(e) {
-				panic(fmt.Sprintf("%v is not a number", e))
-			}
+	}
+	ret = expressionToNumber(args[0])
+	for i, arg := range args {
+		if i == 0 {
+			continue
 		}
-		ret = expressionToNumber(args[0])
-		for i, arg := range args {
-			if i == 0 {
-				continue
-			}
-			ret = ret - expressionToNumber(arg)
+		ret = ret - expressionToNumber(arg)
+	}
+	return ret
+}
+
+func plusFunc(args ...Expression) Expression {
+	var ret Number = 1
+	for _, e := range args {
+		if !IsNumber(e) {
+			panic(fmt.Sprintf("%v is not a number", e))
 		}
-		return ret
-	}),
-	"*": Function(func(args ...Expression) Expression {
-		var ret Number = 1
-		for _, e := range args {
-			if !IsNumber(e) {
-				panic(fmt.Sprintf("%v is not a number", e))
-			}
+	}
+	for _, arg := range args {
+		ret = ret * expressionToNumber(arg)
+	}
+	return ret
+}
+
+func divFunc(args ...Expression) Expression {
+	var ret Number = 1
+	for _, e := range args {
+		if !IsNumber(e) {
+			panic(fmt.Sprintf("%v is not a number", e))
 		}
-		for _, arg := range args {
-			ret = ret * expressionToNumber(arg)
+	}
+	ret = expressionToNumber(args[0])
+	for i, arg := range args {
+		if i == 0 {
+			continue
 		}
-		return ret
-	}),
-	"/": Function(func(args ...Expression) Expression {
-		var ret Number = 1
-		for _, e := range args {
-			if !IsNumber(e) {
-				panic(fmt.Sprintf("%v is not a number", e))
-			}
-		}
-		ret = expressionToNumber(args[0])
-		for i, arg := range args {
-			if i == 0 {
-				continue
-			}
-			ret = ret / expressionToNumber(arg)
-		}
-		return ret
-	}),
-	"=": Function(func(args ...Expression) Expression {
-		if args[0] == args[1] {
-			return true
-		}
-		return false
-	}),
-	"<": Function(func(args ...Expression) Expression {
-		op1 := expressionToNumber(args[0])
-		op2 := expressionToNumber(args[1])
-		if op1 < op2 {
-			return true
-		}
-		return false
-	}),
-	">": Function(func(args ...Expression) Expression {
-		op1 := expressionToNumber(args[0])
-		op2 := expressionToNumber(args[1])
-		if op1 > op2 {
-			return true
-		}
-		return false
-	}),
-	"<=": Function(func(args ...Expression) Expression {
-		op1 := expressionToNumber(args[0])
-		op2 := expressionToNumber(args[1])
-		if op1 <= op2 {
-			return true
-		}
-		return false
-	}),
-	">=": Function(func(args ...Expression) Expression {
-		op1 := expressionToNumber(args[0])
-		op2 := expressionToNumber(args[1])
-		if op1 >= op2 {
-			return true
-		}
-		return false
-	}),
-	"display": Function(func(args ...Expression) Expression {
-		exp := args[0]
-		switch v := exp.(type) {
-		case String:
-			fmt.Print(string(v))
-		default:
-			fmt.Printf("%v", toString(v))
-		}
-		return undefObj
-	}),
-	"displayln": Function(func(args ...Expression) Expression {
-		exp := args[0]
-		switch v := exp.(type) {
-		case String:
-			fmt.Println(string(v))
-		default:
-			fmt.Printf("%v\n", toString(v))
-		}
-		return undefObj
-	}),
-	"true?": Function(func(args ...Expression) Expression {
-		if len(args) != 1 {
-			panic("true? require 1 argument")
-		}
-		return IsTrue(args[0])
-	}),
-	"null?": Function(func(args ...Expression) Expression {
-		if len(args) != 1 {
-			panic("null? require 1 argument")
-		}
-		return isNullExp(args[0])
-	}),
-	"string?": Function(func(args ...Expression) Expression {
-		exp := args[0]
-		return IsString(exp)
-	}),
-	"not": Function(func(args ...Expression) Expression {
-		if len(args) != 1 {
-			panic("not require 1 argument")
-		}
-		return !IsTrue(args[0])
-	}),
-	"and": Function(func(args ...Expression) Expression {
-		if len(args) == 0 {
-			panic("and require more than 1 arguments")
-		}
-		for _, exp := range args {
-			if !IsTrue(exp) {
-				return false
-			}
-		}
+		ret = ret / expressionToNumber(arg)
+	}
+	return ret
+}
+
+func eqlFunc(args ...Expression) Expression {
+	if args[0] == args[1] {
 		return true
-	}),
-	"or": Function(func(args ...Expression) Expression {
-		if len(args) == 0 {
-			panic("or require more than 1 arguments")
+	}
+	return false
+}
+
+func lessFunc(args ...Expression) Expression {
+	op1 := expressionToNumber(args[0])
+	op2 := expressionToNumber(args[1])
+	if op1 < op2 {
+		return true
+	}
+	return false
+}
+
+func greaterFunc(args ...Expression) Expression {
+	op1 := expressionToNumber(args[0])
+	op2 := expressionToNumber(args[1])
+	if op1 > op2 {
+		return true
+	}
+	return false
+}
+
+func lessEqualFunc(args ...Expression) Expression {
+	op1 := expressionToNumber(args[0])
+	op2 := expressionToNumber(args[1])
+	if op1 <= op2 {
+		return true
+	}
+	return false
+}
+
+func greatEqualFunc(args ...Expression) Expression {
+	op1 := expressionToNumber(args[0])
+	op2 := expressionToNumber(args[1])
+	if op1 >= op2 {
+		return true
+	}
+	return false
+}
+
+func displayFunc(args ...Expression) Expression {
+	exp := args[0]
+	switch v := exp.(type) {
+	case String:
+		fmt.Print(string(v))
+	default:
+		fmt.Printf("%v", toString(v))
+	}
+	return undefObj
+}
+
+func displaylnFunc(args ...Expression) Expression {
+	ret := displayFunc(args...)
+	fmt.Println()
+	return ret
+}
+
+func isNullFunc(args ...Expression) Expression {
+	return isNullExp(args[0])
+}
+
+func isStringFunc(args ...Expression) Expression {
+	exp := args[0]
+	return IsString(exp)
+}
+
+func notFunc(args ...Expression) Expression {
+	return !IsTrue(args[0])
+}
+
+func andFunc(args ...Expression) Expression {
+	for _, exp := range args {
+		if !IsTrue(exp) {
+			return false
 		}
-		for _, exp := range args {
-			if IsTrue(exp) {
-				return true
-			}
+	}
+	return true
+}
+
+func orFunc(args ...Expression) Expression {
+	for _, exp := range args {
+		if IsTrue(exp) {
+			return true
 		}
-		return false
-	}),
-	"cons":     Function(consImpl),
-	"car":      Function(carImpl),
-	"cdr":      Function(cdrImpl),
-	"list":     Function(listImpl),
-	"append":   Function(appendImpl),
-	"set-car!": Function(setCarImpl),
-	"set-cdr!": Function(setCdrImpl),
-	"concat": Function(func(args ...Expression) Expression {
-		var ret String
-		for _, arg := range args {
-			s, ok := arg.(String)
-			if !ok {
-				panic(fmt.Sprintf("argument %v is not a String", arg))
-			}
-			ret += s
+	}
+	return false
+}
+
+// concatFunc concat the strings
+func concatFunc(args ...Expression) Expression {
+	var ret String
+	for _, arg := range args {
+		s, ok := arg.(String)
+		if !ok {
+			panic(fmt.Sprintf("argument %v is not a String", arg))
 		}
-		return ret
-	}),
+		ret += s
+	}
+	return ret
+}
+
+var builtinFunctions = map[Symbol]Function{
+	"exit":      NewFunction("exit", exitFunc, 0, 0),
+	"+":         NewFunction("+", addFunc, 1, -1),
+	"-":         NewFunction("-", minusFunc, 1, -1),
+	"*":         NewFunction("*", plusFunc, 1, -1),
+	"/":         NewFunction("/", divFunc, 1, -1),
+	"=":         NewFunction("=", eqlFunc, 2, 2),
+	"<":         NewFunction("<", lessFunc, 2, 2),
+	">":         NewFunction(">", greaterFunc, 2, 2),
+	"<=":        NewFunction("<=", lessEqualFunc, 2, 2),
+	">=":        NewFunction(">=", greatEqualFunc, 2, 2),
+	"display":   NewFunction("display", displayFunc, 1, 1),
+	"displayln": NewFunction("displayln", displaylnFunc, 1, 1),
+	"null?":     NewFunction("null?", isNullFunc, 1, 1),
+	"string?":   NewFunction("string?", isStringFunc, 1, 1),
+	"not":       NewFunction("not", notFunc, 1, 1),
+	"and":       NewFunction("and", andFunc, 1, -1),
+	"or":        NewFunction("or", orFunc, 1, -1),
+	"cons":      NewFunction("cons", consImpl, 2, 2),
+	"car":       NewFunction("car", carImpl, 1, 1),
+	"cdr":       NewFunction("cdr", cdrImpl, 1, 1),
+	"list":      NewFunction("list", listImpl, -1, -1),
+	"append":    NewFunction("append", appendImpl, 2, -1),
+	"set-car!":  NewFunction("set-car!", setCarImpl, 2, 2),
+	"set-cdr!":  NewFunction("set-cdr!", setCdrImpl, 2, 2),
+	"concat":    NewFunction("concat", concatFunc, 2, -1),
 }
 
 func setCarImpl(args ...Expression) Expression {
@@ -251,9 +265,6 @@ func listImpl(args ...Expression) Expression {
 }
 
 func carImpl(args ...Expression) Expression {
-	if len(args) != 1 {
-		panic("require 1 argument")
-	}
 	v := args[0]
 	switch p := v.(type) {
 	case *Pair:
@@ -264,9 +275,6 @@ func carImpl(args ...Expression) Expression {
 }
 
 func cdrImpl(args ...Expression) Expression {
-	if len(args) != 1 {
-		panic("require 1 argument")
-	}
 	v := args[0]
 	switch p := v.(type) {
 	case *Pair:
@@ -319,7 +327,7 @@ func setupBuiltinEnv() *Env {
 		outer: nil,
 		frame: make(map[Symbol]Expression),
 	}
-	for k, fn := range builtinFuncs {
+	for k, fn := range builtinFunctions {
 		builtinEnv.Set(k, fn)
 	}
 	loadBuiltinProcedures(builtinEnv)

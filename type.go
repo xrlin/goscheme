@@ -24,10 +24,52 @@ type Quote string
 
 type Boolean bool
 
-type Function func(...Expression) Expression
+type commonFunction func(args ...Expression) Expression
+
+type Function struct {
+	name     string
+	function commonFunction
+	minArgs  int
+	maxArgs  int
+}
+
+func (f Function) Call(args ...Expression) Expression {
+	if err := f.validateArgCount(args...); err != nil {
+		panic(err)
+	}
+	return f.function(args...)
+}
+
+func (f Function) validateArgCount(args ...Expression) error {
+	if f.minArgs == -1 && f.maxArgs == -1 {
+		return nil
+	}
+	c := len(args)
+	if f.minArgs == f.maxArgs && f.maxArgs != c {
+		return fmt.Errorf("%s requires %d arguments but %d arguments provided", f.name, f.maxArgs, c)
+	}
+	if f.minArgs != -1 && f.minArgs > c {
+		return fmt.Errorf("%s requires at least %d arguments but %d arguments provided", f.name, f.minArgs, c)
+	}
+	if f.maxArgs != -1 && f.maxArgs < c {
+		return fmt.Errorf("%s requires no more than %d arguments, but %d arguments provided", f.name, f.maxArgs, c)
+	}
+	return nil
+}
 
 func (f Function) String() string {
 	return "#[BuiltinFunction]"
+}
+
+// NewFunc return a Function struct init with arguments.
+// minArgs, maxArgs define the arguments count limitation of Function. Set to -1 means no limitation.
+func NewFunction(funcName string, f commonFunction, minArgs int, maxArgs int) Function {
+	return Function{
+		name:     funcName,
+		function: f,
+		minArgs:  minArgs,
+		maxArgs:  maxArgs,
+	}
 }
 
 type NilType struct{}
@@ -191,18 +233,18 @@ func (lambda *LambdaProcess) String() string {
 		}
 	}
 	buf.WriteString(") ")
-	buf.WriteString(concactLambdaBodyToString(lambda.body))
+	buf.WriteString(concatLambdaBodyToString(lambda.body))
 	buf.WriteString(")")
 	return buf.String()
 }
 
-func concactLambdaBodyToString(exp Expression) string {
+func concatLambdaBodyToString(exp Expression) string {
 	var buf bytes.Buffer
 	switch v := exp.(type) {
 	case []Expression:
 		buf.WriteString("(")
 		for i, exp := range v {
-			buf.WriteString(concactLambdaBodyToString(exp))
+			buf.WriteString(concatLambdaBodyToString(exp))
 			if i != len(v)-1 {
 				buf.WriteString(" ")
 			}
