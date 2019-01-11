@@ -33,10 +33,7 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			return
 		} else if IsSpecialSyntaxExpression(exp, "define") {
 			operators, _ := exp.([]Expression)
-			if len(operators) != 3 {
-				panic("define require 3 arguments")
-			}
-			ret = evalDefine(operators[1], operators[2], env)
+			ret = evalDefine(operators[1], operators[2:], env)
 			return
 		} else if IsSpecialSyntaxExpression(exp, "eval") {
 			exps, _ := exp.([]Expression)
@@ -57,6 +54,12 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 		} else if IsSpecialSyntaxExpression(exp, "load") {
 			exps := exp.([]Expression)
 			return evalLoad(exps[1], env)
+		} else if IsSpecialSyntaxExpression(exp, "delay") {
+			return evalDelay(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "and") {
+			return evalAnd(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "or") {
+			return evalOr(exp, env)
 		} else {
 			ops, ok := exp.([]Expression)
 			if !ok {
@@ -82,13 +85,46 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 				for i, arg := range ops[1:] {
 					newEnv.Set(p.params[i], Eval(arg, env))
 				}
-				exp = p.body
+				exp = p.Body()
 				env = newEnv
 			default:
 				panic(fmt.Sprintf("%v is not callable", fn))
 			}
 		}
 	}
+}
+func evalAnd(exp Expression, env *Env) Expression {
+	expressions, ok := exp.([]Expression)
+	if !ok || len(expressions) < 2 {
+		panic("and require at least 1 argument")
+	}
+	for _, e := range expressions[1:] {
+		if !IsTrue(Eval(e, env)) {
+			return false
+		}
+	}
+	return true
+}
+
+func evalOr(exp Expression, env *Env) Expression {
+	expressions, ok := exp.([]Expression)
+	if !ok || len(expressions) < 2 {
+		panic("or require at least 1 argument")
+	}
+	for _, e := range expressions[1:] {
+		if IsTrue(Eval(e, env)) {
+			return true
+		}
+	}
+	return false
+}
+
+func evalDelay(exp Expression, env *Env) Expression {
+	exps, ok := exp.([]Expression)
+	if !ok || len(exps) < 2 {
+		panic("delay require one argument")
+	}
+	return NewThunk(exps[1], env)
 }
 
 func isNullExp(exp Expression) bool {
@@ -131,7 +167,7 @@ func evalEval(exp Expression, env *Env) Expression {
 	if !validEvalExp(arg) {
 		panic("error: malformed list")
 	}
-	expStr := toString(arg)
+	expStr := valueToString(arg)
 	t := NewTokenizerFromString(expStr)
 	tokens := t.Tokens()
 	ret, err := Parse(&tokens)
@@ -231,7 +267,7 @@ func evalQuote(exp Expression, env *Env) Expression {
 func evalLambda(exp Expression, env *Env) *LambdaProcess {
 	se, _ := exp.([]Expression)
 	paramOperand := se[1]
-	body := se[2]
+	body := se[2:]
 	var paramNames []Symbol
 	switch p := paramOperand.(type) {
 	case []Expression:
@@ -255,7 +291,7 @@ func isQuoteExpression(exp Expression) bool {
 	return ops[0] == "quote"
 }
 
-func evalDefine(s Expression, val Expression, env *Env) Expression {
+func evalDefine(s Expression, val []Expression, env *Env) Expression {
 	switch se := s.(type) {
 	case []Expression:
 		var symbols []Symbol
@@ -265,7 +301,10 @@ func evalDefine(s Expression, val Expression, env *Env) Expression {
 		p := makeLambdaProcess(symbols[1:], val, env)
 		env.Set(Symbol(symbols[0]), p)
 	case Expression:
-		env.Set(transExpressionToSymbol(se), Eval(val, env))
+		if len(val) != 1 {
+			panic("define: bad syntax (multiple expressions after identifier")
+		}
+		env.Set(transExpressionToSymbol(se), Eval(val[0], env))
 	}
 	return undefObj
 }
@@ -285,7 +324,7 @@ func getParamSymbols(input []string) (ret []Symbol) {
 	return
 }
 
-func makeLambdaProcess(paramNames []Symbol, body Expression, env *Env) *LambdaProcess {
+func makeLambdaProcess(paramNames []Symbol, body []Expression, env *Env) *LambdaProcess {
 	return &LambdaProcess{paramNames, body, env}
 }
 
@@ -302,10 +341,11 @@ func EvalAll(exps []Expression, env *Env) (ret Expression) {
 }
 
 func expressionToNumber(exp Expression) Number {
-	if !IsNumber(exp) {
-		panic(fmt.Sprintf("%v is not a number", exp))
+	v := exp
+	if !IsNumber(v) {
+		panic(fmt.Sprintf("%v is not a number", v))
 	}
-	switch t := exp.(type) {
+	switch t := v.(type) {
 	case Number:
 		return t
 	case string:
@@ -339,12 +379,10 @@ func evalIf(exp []Expression, env *Env) Expression {
 }
 
 func evalBegin(exp []Expression, env *Env) Expression {
-	//var ret Expression
 	for _, e := range exp[1 : len(exp)-1] {
 		Eval(e, env)
 	}
 	return exp[len(exp)-1]
-	//return ret
 }
 
 func evalCond(exp Expression, env *Env) Expression {

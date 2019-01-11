@@ -72,13 +72,72 @@ func NewFunction(funcName string, f commonFunction, minArgs int, maxArgs int) Fu
 	}
 }
 
+// Thunk wraps expressoin for lazy execution
+// Thunk should use as pointer
+type Thunk struct {
+	// expression to execute
+	Exp Expression
+	// expression result cache
+	ret Expression
+	// context to execute Exp
+	Env *Env
+}
+
+func (t Thunk) String() string {
+	if t.ret != nil {
+		return fmt.Sprintf("#[Thunk %s]", t.ret)
+	}
+	return fmt.Sprintf("#[Thunk exp: %s]", t.Exp)
+}
+
+// Value returns the actual value of the thunk
+func (t *Thunk) Value() Expression {
+	if t.ret != nil {
+		return t.ret
+	}
+	value := Eval(t.Exp, t.Env)
+	switch t2 := value.(type) {
+	case *Thunk:
+		value = t2.Value()
+	default:
+	}
+	t.ret = value
+	return t.ret
+}
+
+// IsThunk checks whether an expression is a thunk and return the result
+func IsThunk(exp Expression) bool {
+	switch exp.(type) {
+	case *Thunk:
+		return true
+	default:
+		return false
+	}
+}
+
+// NewThunk creates a thunk and returns the pointer
+func NewThunk(exp Expression, env *Env) *Thunk {
+	return &Thunk{Env: env, Exp: exp}
+}
+
+// ActualValue returns the actual value of an expression.
+// If the expression is a Thunk, eval and return the result, otherwise return the expression itself.
+func ActualValue(exp Expression) Expression {
+	switch p := exp.(type) {
+	case *Thunk:
+		return p.Value()
+	default:
+		return exp
+	}
+}
+
 type NilType struct{}
 
 func (n NilType) String() string {
 	return "()"
 }
 
-var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote", "eval", "apply", "load"}
+var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote", "eval", "apply", "load", "delay", "and", "or"}
 
 var NilObj = NilType{}
 
@@ -182,7 +241,7 @@ func IsBoolean(exp Expression) bool {
 	return exp == "#t" || exp == "#f"
 }
 
-// IsTrue check whether the condition is true. Return false when exp is #f or false, otherwise return true
+// IsTrue check whether the condition is true. Return false when Exp is #f or false, otherwise return true
 func IsTrue(exp Expression) bool {
 	if exp == "#f" || exp == false {
 		return false
@@ -219,7 +278,7 @@ func IsPair(obj Expression) bool {
 
 type LambdaProcess struct {
 	params []Symbol
-	body   Expression
+	body   []Expression // expressions of the lambda process
 	env    *Env
 }
 
@@ -238,13 +297,14 @@ func (lambda *LambdaProcess) String() string {
 	return buf.String()
 }
 
-func concatLambdaBodyToString(exp Expression) string {
+// return the string represents the expression text
+func expToPrintString(exp Expression) string {
 	var buf bytes.Buffer
 	switch v := exp.(type) {
 	case []Expression:
 		buf.WriteString("(")
 		for i, exp := range v {
-			buf.WriteString(concatLambdaBodyToString(exp))
+			buf.WriteString(expToPrintString(exp))
 			if i != len(v)-1 {
 				buf.WriteString(" ")
 			}
@@ -256,8 +316,22 @@ func concatLambdaBodyToString(exp Expression) string {
 	return buf.String()
 }
 
-func (lambda *LambdaProcess) call(env *Env, args ...Expression) Expression {
-	return nil
+func concatLambdaBodyToString(expressions []Expression) string {
+	var buf bytes.Buffer
+	for i, exp := range expressions {
+		buf.WriteString(expToPrintString(exp))
+		if i != len(expressions)-1 {
+			buf.WriteString(" ")
+		}
+	}
+	return buf.String()
+}
+
+func (lambda *LambdaProcess) Body() Expression {
+	if len(lambda.body) == 1 {
+		return lambda.body[0]
+	}
+	return sequenceToExp(lambda.body)
 }
 
 // Should only use with pointer
@@ -328,7 +402,7 @@ func shouldPrint(exp Expression) bool {
 }
 
 // Output string in interactive console that represents the expression value.
-func toString(exp Expression) string {
+func valueToString(exp Expression) string {
 	switch v := exp.(type) {
 	case bool:
 		if v == false {

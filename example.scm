@@ -57,20 +57,17 @@
    (if (< num 10) 1 (+ (number-width (/ num 10)) 1)))
   (number-width num)))
 
-(define (number-char-width-without-padding num)
- (begin
-  (define (number-width num)
-   (if (< num 10) 1 (+ (number-width (/ num 10)) 1)))
-  (number-width num)))
-
 (define (display-pascal-num num width)
- (if (<= (number-char-width-without-padding num) width)
+ (if (<= (number-char-width num) width)
   (begin (display num) (display-blank (- width (number-char-width num))) (display-tab 2))))
 
-(define (display-pascal-triangle start-level max-level)
+(define (display-pascal-triangle-helper start-level max-level char-width)
  (if (<= start-level max-level) (begin
-                                 (define width (number-char-width (max-pascal-number max-level)))
-                                 (display-pascal-helper (generate-pascal start-level) start-level max-level width)
-                                 (display-pascal-triangle (+ start-level 1) max-level))))
+                                 (display-pascal-helper (generate-pascal start-level) start-level max-level char-width)
+                                 (display-pascal-triangle-helper (+ start-level 1) max-level char-width))))
+
+(define (display-pascal-triangle start-level max-level)
+ (display-pascal-triangle-helper start-level max-level (number-char-width (max-pascal-number max-level))))
+
 
 

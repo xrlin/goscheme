@@ -212,16 +212,51 @@ func TestEval4(t *testing.T) {
 		{`(apply (lambda x x) '(3))`, Number(3)},
 		{`(apply (lambda (x y) (+ x y)) '(3 4))`, Number(7)},
 	}
-	env := setupBuiltinEnv()
 	for _, c := range testCases {
+		env := setupBuiltinEnv()
 		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
 	}
 	// test nothing panic
+	env := setupBuiltinEnv()
 	assert.Equal(t, undefObj, Eval([]Expression{"load", "\"test.scm\""}, env))
 	assert.Equal(t, undefObj, Eval([]Expression{"load", "\"test\""}, env))
 	assert.Equal(t, undefObj, Eval([]Expression{"load", []Expression{"quote", []Expression{"test.scm"}}}, env))
 	_, err := env.Find("test-method")
 	assert.Nil(t, err)
+}
+
+// test lazy evaluation
+func TestEval5(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected Expression
+	}{
+		{`(thunk? (delay (+ 1 2)))`, true},
+		{`(force (delay (+ 1 2)))`, Number(3)},
+		{`(define (try a b) (if (= a 0) b a)) (try 1 (delay (+ 1 "x")))`, Number(1)},
+		// eval error
+		{`(define (try a b) (if (= a 0) (force b) (force a))) (try 0 (delay (+ 1 "x")))`, undefObj},
+	}
+	for _, c := range testCases {
+		env := setupBuiltinEnv()
+		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+	}
+}
+
+// test short circuit evaluation
+func TestEval6(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected Expression
+	}{
+		{`(or 1 unbound-syntax)`, true},
+		// eval error
+		{`(and 1 unbound-syntax)`, nil},
+	}
+	for _, c := range testCases {
+		env := setupBuiltinEnv()
+		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+	}
 }
 
 func TestIsSyntaxExpression(t *testing.T) {

@@ -169,7 +169,7 @@ func (i *Interpreter) initPromote() {
 }
 
 func (i *Interpreter) evalPromptInput(input string) {
-	// after each exec should init the interpreter status
+	// after each exec should init the interpreter's internal value
 	defer func() {
 		i.currentLineScript = make([]byte, 0, 10)
 		i.currentFragment = make([]byte, 0, 10)
@@ -188,7 +188,7 @@ func (i *Interpreter) evalPromptInput(input string) {
 		}
 		ret := EvalAll(expTokens, i.env)
 		if shouldPrint(ret) {
-			fmt.Println(toString(ret))
+			fmt.Printf("#=>%s\n", valueToString(ret))
 		}
 		i.currentFragment = make([]byte, 0, 10)
 	}

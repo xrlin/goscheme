@@ -2,9 +2,7 @@ package goscheme
 
 import (
 	"fmt"
-	"go/types"
 	"os"
-	"strconv"
 )
 
 type Env struct {
@@ -36,11 +34,6 @@ func exitFunc(args ...Expression) Expression {
 
 func addFunc(args ...Expression) Expression {
 	var ret Number
-	for _, e := range args {
-		if !IsNumber(e) {
-			panic(fmt.Sprintf("%v is not a number", e))
-		}
-	}
 	for _, arg := range args {
 		ret = ret + expressionToNumber(arg)
 	}
@@ -49,11 +42,6 @@ func addFunc(args ...Expression) Expression {
 
 func minusFunc(args ...Expression) Expression {
 	var ret Number
-	for _, e := range args {
-		if !IsNumber(e) {
-			panic(fmt.Sprintf("%v is not a number", e))
-		}
-	}
 	ret = expressionToNumber(args[0])
 	for i, arg := range args {
 		if i == 0 {
@@ -66,11 +54,6 @@ func minusFunc(args ...Expression) Expression {
 
 func plusFunc(args ...Expression) Expression {
 	var ret Number = 1
-	for _, e := range args {
-		if !IsNumber(e) {
-			panic(fmt.Sprintf("%v is not a number", e))
-		}
-	}
 	for _, arg := range args {
 		ret = ret * expressionToNumber(arg)
 	}
@@ -79,11 +62,6 @@ func plusFunc(args ...Expression) Expression {
 
 func divFunc(args ...Expression) Expression {
 	var ret Number = 1
-	for _, e := range args {
-		if !IsNumber(e) {
-			panic(fmt.Sprintf("%v is not a number", e))
-		}
-	}
 	ret = expressionToNumber(args[0])
 	for i, arg := range args {
 		if i == 0 {
@@ -143,7 +121,7 @@ func displayFunc(args ...Expression) Expression {
 	case String:
 		fmt.Print(string(v))
 	default:
-		fmt.Printf("%v", toString(v))
+		fmt.Printf("%v", valueToString(v))
 	}
 	return undefObj
 }
@@ -189,13 +167,22 @@ func orFunc(args ...Expression) Expression {
 func concatFunc(args ...Expression) Expression {
 	var ret String
 	for _, arg := range args {
-		s, ok := arg.(String)
+		v := arg
+		s, ok := v.(String)
 		if !ok {
-			panic(fmt.Sprintf("argument %v is not a String", arg))
+			panic(fmt.Sprintf("argument %v is not a String", v))
 		}
 		ret += s
 	}
 	return ret
+}
+
+func checkThunkFunc(args ...Expression) Expression {
+	return IsThunk(args[0])
+}
+
+func forceFunc(args ...Expression) Expression {
+	return ActualValue(args[0])
 }
 
 var builtinFunctions = map[Symbol]Function{
@@ -214,16 +201,18 @@ var builtinFunctions = map[Symbol]Function{
 	"null?":     NewFunction("null?", isNullFunc, 1, 1),
 	"string?":   NewFunction("string?", isStringFunc, 1, 1),
 	"not":       NewFunction("not", notFunc, 1, 1),
-	"and":       NewFunction("and", andFunc, 1, -1),
-	"or":        NewFunction("or", orFunc, 1, -1),
-	"cons":      NewFunction("cons", consImpl, 2, 2),
-	"car":       NewFunction("car", carImpl, 1, 1),
-	"cdr":       NewFunction("cdr", cdrImpl, 1, 1),
-	"list":      NewFunction("list", listImpl, -1, -1),
-	"append":    NewFunction("append", appendImpl, 2, -1),
-	"set-car!":  NewFunction("set-car!", setCarImpl, 2, 2),
-	"set-cdr!":  NewFunction("set-cdr!", setCdrImpl, 2, 2),
-	"concat":    NewFunction("concat", concatFunc, 2, -1),
+	//"and":       NewFunction("and", andFunc, 1, -1),
+	//"or":        NewFunction("or", orFunc, 1, -1),
+	"cons":     NewFunction("cons", consImpl, 2, 2),
+	"car":      NewFunction("car", carImpl, 1, 1),
+	"cdr":      NewFunction("cdr", cdrImpl, 1, 1),
+	"list":     NewFunction("list", listImpl, -1, -1),
+	"append":   NewFunction("append", appendImpl, 2, -1),
+	"set-car!": NewFunction("set-car!", setCarImpl, 2, 2),
+	"set-cdr!": NewFunction("set-cdr!", setCdrImpl, 2, 2),
+	"concat":   NewFunction("concat", concatFunc, 2, -1),
+	"thunk?":   NewFunction("thunk?", checkThunkFunc, 1, 1),
+	"force":    NewFunction("thunk?", forceFunc, 1, 1),
 }
 
 func setCarImpl(args ...Expression) Expression {
@@ -251,9 +240,6 @@ func setCdrImpl(args ...Expression) Expression {
 }
 
 func consImpl(args ...Expression) Expression {
-	if len(args) != 2 {
-		panic("cons takes 2 arguments but " + strconv.Itoa(len(args)) + " provided")
-	}
 	return &Pair{args[0], args[1]}
 }
 
@@ -285,9 +271,6 @@ func cdrImpl(args ...Expression) Expression {
 }
 
 func appendImpl(args ...Expression) Expression {
-	if len(args) < 2 {
-		panic("must provide 2 arguments")
-	}
 	ret := args[0]
 	for i := 1; i < len(args); i++ {
 		ret = merge(ret, args[i])
@@ -314,8 +297,6 @@ func isList(exp Expression) bool {
 	case *Pair:
 		return l.IsList()
 	case NilType:
-		return true
-	case types.Nil:
 		return true
 	default:
 		return false
