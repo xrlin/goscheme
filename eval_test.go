@@ -259,6 +259,48 @@ func TestEval6(t *testing.T) {
 	}
 }
 
+// test let, let*, letrec, set!
+func TestEval7(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected Expression
+	}{
+		{`(let ((x 2) (y 3))
+  					(* x y))`, Number(6)},
+		{`(let ((x 2) (y 3))
+  					(let ((foo (lambda (z) (+ x y z)))
+        				(x 7))
+    					(foo 4))) `, Number(9)},
+		{`(let ((x 2) (y 3))
+  					(let* ((x 7)
+         				(z (+ x y)))
+						(* z x)))`, Number(70)},
+		{`(letrec (
+					(zero? (lambda (x) (= x 0))) 
+					(even?
+          			(lambda (n)
+            			(if (zero? n)
+                			#t
+							(odd? (- n 1)))))
+					(odd?
+						(lambda (n)
+            				(if (zero? n)
+                				#f
+                				(even? (- n 1))))))
+				(even? 88))`, true},
+		{`(letrec ((b a) (a 1)) b)`, undefObj},
+		//{`(define (f a)
+		//			(let ((b 3)) (set! a 3))
+		//			a)
+		//		(f 4)`, Number(3)},
+
+	}
+	for _, c := range testCases {
+		env := setupBuiltinEnv()
+		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+	}
+}
+
 func TestIsSyntaxExpression(t *testing.T) {
 	assert.Equal(t, true, IsSyntaxExpression([]Expression{"begin"}))
 }

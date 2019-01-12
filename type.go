@@ -137,7 +137,7 @@ func (n NilType) String() string {
 	return "()"
 }
 
-var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote", "eval", "apply", "load", "delay", "and", "or"}
+var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote", "eval", "apply", "load", "delay", "and", "or", "let", "let*", "letrec", "set!"}
 
 var NilObj = NilType{}
 

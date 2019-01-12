@@ -60,6 +60,14 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 			return evalAnd(exp, env)
 		} else if IsSpecialSyntaxExpression(exp, "or") {
 			return evalOr(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "let") {
+			return evalLet(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "let*") {
+			return evalL2RLet(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "letrec") {
+			return evalLetRec(exp, env)
+		} else if IsSpecialSyntaxExpression(exp, "set!") {
+			return evalSet(exp, env)
 		} else {
 			ops, ok := exp.([]Expression)
 			if !ok {
@@ -93,6 +101,105 @@ func Eval(exp Expression, env *Env) (ret Expression) {
 		}
 	}
 }
+func evalSet(exp Expression, env *Env) Expression {
+	expressions, ok := exp.([]Expression)
+	if !ok || len(expressions) != 3 {
+		panic("set!: syntax error (set! requires variable and value arguments)")
+	}
+	sym := transExpressionToSymbol(expressions[1])
+	val := Eval(expressions[2], env)
+	currentEnv := env
+	for currentEnv != nil {
+		if _, ok := currentEnv.frame[sym]; ok {
+			currentEnv.Set(sym, val)
+			return undefObj
+		}
+		currentEnv = env.outer
+	}
+	panic(fmt.Sprintf("variable %v cannot set! before define", sym))
+}
+
+func evalLetRec(exp Expression, env *Env) Expression {
+	expressions, ok := exp.([]Expression)
+	if !ok || len(expressions) < 3 {
+		panic("letrec: syntax error (letrec should pass the variables and body)")
+	}
+	bindings, ok := expressions[1].([]Expression)
+	if !ok {
+		panic("letrec: syntax error (not a valid binding)")
+	}
+	newEnv := &Env{outer: env, frame: make(map[Symbol]Expression)}
+	// init symbols with undef
+	for _, exp := range bindings {
+		binding, ok := exp.([]Expression)
+		if !ok || len(binding) != 2 {
+			panic("letrec: syntax error (not a valid binding)")
+		}
+		newEnv.Set(transExpressionToSymbol(binding[0]), undefObj)
+	}
+	// set value for symbols
+	for _, exp := range bindings {
+		binding, _ := exp.([]Expression)
+		newEnv.Set(transExpressionToSymbol(binding[0]), Eval(binding[1], newEnv))
+	}
+	var ret Expression
+	for _, exp := range expressions[2:] {
+		ret = Eval(exp, newEnv)
+	}
+	return ret
+}
+
+func evalL2RLet(exp Expression, env *Env) Expression {
+	expressions, ok := exp.([]Expression)
+	if !ok || len(expressions) < 3 {
+		panic("let*: syntax error (let* should pass the variables and body)")
+	}
+	bindings, ok := expressions[1].([]Expression)
+	if !ok {
+		panic("let*: syntax error (not a valid binding)")
+	}
+	var outerEnv, currentEnv *Env
+	outerEnv = env
+	for _, exp := range bindings {
+		currentEnv = &Env{outer: outerEnv, frame: make(map[Symbol]Expression)}
+		binding, ok := exp.([]Expression)
+		if !ok || len(binding) != 2 {
+			panic("let*: syntax error (not a valid binding)")
+		}
+		currentEnv.Set(transExpressionToSymbol(binding[0]), Eval(binding[1], currentEnv))
+		outerEnv = currentEnv
+	}
+	var ret Expression
+	for _, exp := range expressions[2:] {
+		ret = Eval(exp, currentEnv)
+	}
+	return ret
+}
+
+func evalLet(exp Expression, env *Env) Expression {
+	expressions, ok := exp.([]Expression)
+	if !ok || len(expressions) < 3 {
+		panic("let: syntax error (let should pass the variables and body)")
+	}
+	bindings, ok := expressions[1].([]Expression)
+	if !ok {
+		panic("let: syntax error (not a valid binding)")
+	}
+	newEnv := &Env{outer: env, frame: make(map[Symbol]Expression)}
+	for _, exp := range bindings {
+		binding, ok := exp.([]Expression)
+		if !ok || len(binding) != 2 {
+			panic("let: syntax error (not a valid binding)")
+		}
+		newEnv.Set(transExpressionToSymbol(binding[0]), Eval(binding[1], env))
+	}
+	var ret Expression
+	for _, exp := range expressions[2:] {
+		ret = Eval(exp, newEnv)
+	}
+	return ret
+}
+
 func evalAnd(exp Expression, env *Env) Expression {
 	expressions, ok := exp.([]Expression)
 	if !ok || len(expressions) < 2 {
