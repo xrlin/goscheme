@@ -27,6 +27,18 @@ func (e *Env) Set(symbol Symbol, value Expression) {
 	e.frame[symbol] = value
 }
 
+// Symbols returns the bound symbols including the outer frame
+func (e *Env) Symbols() []Symbol {
+	var ret []Symbol
+	for k := range e.frame {
+		ret = append(ret, k)
+	}
+	if e.outer != nil {
+		ret = append(ret, e.outer.Symbols()...)
+	}
+	return ret
+}
+
 func exitFunc(args ...Expression) Expression {
 	exit <- os.Interrupt
 	return NilObj

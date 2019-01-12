@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 )
 
 var exit = make(chan os.Signal, 1)
@@ -46,6 +47,7 @@ type Interpreter struct {
 	prompt            *prompt.Prompt
 	exit              chan os.Signal
 	mode              InterpreterMode
+	consoleWriter     prompt.ConsoleWriter
 	env               *Env
 }
 
@@ -141,7 +143,8 @@ func (i *Interpreter) printTips() {
 }
 
 func (i *Interpreter) indents() int {
-	return neededIndents(bytes.NewReader(i.currentFragment))
+	codeFragment := i.currentFragment
+	return neededIndents(bytes.NewReader(codeFragment))
 }
 
 func (i *Interpreter) printIndents() {
@@ -155,24 +158,60 @@ func (i *Interpreter) printIndents() {
 func (i *Interpreter) initPromote() {
 	p := prompt.New(func(s string) {
 		i.evalPromptInput(s)
-	}, func(document prompt.Document) []prompt.Suggest {
-		return []prompt.Suggest{}
-	}, prompt.OptionLivePrefix(func() (prefix string, useLivePrefix bool) {
+	}, i.completer, prompt.OptionLivePrefix(func() (prefix string, useLivePrefix bool) {
 		prefix = ">>>"
 		useLivePrefix = true
 		if i.indents() > 0 {
 			prefix = ""
 		}
 		return
-	}))
+	}), prompt.OptionWriter(i.writer()))
 	i.prompt = p
 }
 
+func (i *Interpreter) writer() prompt.ConsoleWriter {
+	if i.consoleWriter == nil {
+		i.consoleWriter = prompt.NewStdoutWriter()
+	}
+	return i.consoleWriter
+}
+
+func (i *Interpreter) print(text string, color prompt.Color) {
+	writer := i.writer()
+	writer.SetColor(color, prompt.DefaultColor, true)
+	writer.WriteStr(text)
+	writer.SetColor(prompt.DefaultColor, prompt.DefaultColor, false)
+}
+
+func (i *Interpreter) completer(d prompt.Document) (ret []prompt.Suggest) {
+	source := d.GetWordBeforeCursor()
+	key := strings.Trim(d.GetWordBeforeCursor(), "(")
+	completeText := func(s string) string {
+		return strings.Replace(source, key, s, 1)
+	}
+	if key == "" {
+		return
+	}
+	for _, s := range syntaxes {
+		if strings.HasPrefix(s, key) {
+			ret = append(ret, prompt.Suggest{Text: completeText(s), Description: s})
+		}
+	}
+	for _, s := range i.env.Symbols() {
+		if strings.HasPrefix(string(s), key) {
+			ret = append(ret, prompt.Suggest{Text: completeText(string(s)), Description: string(s)})
+		}
+	}
+	return
+}
+
 func (i *Interpreter) evalPromptInput(input string) {
-	// after each exec should init the interpreter's internal value
+	// if exec failed should re-init the interpreter's internal value
 	defer func() {
-		i.currentLineScript = make([]byte, 0, 10)
-		i.currentFragment = make([]byte, 0, 10)
+		if r := recover(); r != nil {
+			i.currentLineScript = make([]byte, 0, 10)
+			i.currentFragment = make([]byte, 0, 10)
+		}
 	}()
 
 	i.currentLineScript = []byte(input)
@@ -183,12 +222,12 @@ func (i *Interpreter) evalPromptInput(input string) {
 		tokens := tokenizer.Tokens()
 		expTokens, err := Parse(&tokens)
 		if err != nil {
-			fmt.Printf("%s\n", err)
+			i.print(fmt.Sprintf("%s\n", err), prompt.Red)
 			return
 		}
 		ret := EvalAll(expTokens, i.env)
 		if shouldPrint(ret) {
-			fmt.Printf("#=>%s\n", valueToString(ret))
+			i.print(fmt.Sprintf("#=>%s\n", valueToString(ret)), prompt.Green)
 		}
 		i.currentFragment = make([]byte, 0, 10)
 	}
