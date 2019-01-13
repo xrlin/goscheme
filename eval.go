@@ -11,24 +11,15 @@ import (
 
 func Eval(exp Expression, env *Env) (ret Expression, err error) {
 	for {
-		if isNullExp(exp) {
-			return NilObj, nil
+		if IsPrimitiveExpression(exp) {
+			return evalPrimitive(exp)
 		}
-		if isUndefObj(exp) {
-			return undefObj, nil
-		}
-		if IsNumber(exp) {
-			ret, err = expressionToNumber(exp)
-			return
-		} else if IsBoolean(exp) {
-			return IsTrue(exp), nil
-		} else if IsString(exp) {
-			return expToString(exp)
-		} else if IsSymbol(exp) {
+		if IsSymbol(exp) {
 			s, _ := exp.(string)
 			ret, err = env.Find(Symbol(s))
 			return
-		} else if IsSpecialSyntaxExpression(exp, "define") {
+		}
+		if IsSpecialSyntaxExpression(exp, "define") {
 			operators, ok := exp.([]Expression)
 			if !ok {
 				err = fmt.Errorf("%v not a valid syntax expression", exp)
@@ -136,6 +127,26 @@ func Eval(exp Expression, env *Env) (ret Expression, err error) {
 		}
 	}
 }
+
+func evalPrimitive(exp Expression) (Expression, error) {
+	if isNullExp(exp) {
+		return NilObj, nil
+	}
+	if isUndefObj(exp) {
+		return undefObj, nil
+	}
+	if IsNumber(exp) {
+		return expressionToNumber(exp)
+	}
+	if IsBoolean(exp) {
+		return IsTrue(exp), nil
+	}
+	if IsString(exp) {
+		return expToString(exp)
+	}
+	return undefObj, errors.New("not a primitive expression")
+}
+
 func evalSet(exp Expression, env *Env) (Expression, error) {
 	expressions, ok := exp.([]Expression)
 	if !ok || len(expressions) != 3 {

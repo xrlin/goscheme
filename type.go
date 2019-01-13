@@ -422,3 +422,10 @@ func valueToString(exp Expression) string {
 	}
 	return fmt.Sprintf("%v", exp)
 }
+
+func IsPrimitiveExpression(exp Expression) bool {
+	if isNullExp(exp) || isUndefObj(exp) || IsNumber(exp) || IsBoolean(exp) || IsString(exp) {
+		return true
+	}
+	return false
+}
