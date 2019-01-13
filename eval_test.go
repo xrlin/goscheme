@@ -1,6 +1,7 @@
 package goscheme
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -11,7 +12,7 @@ func TestEval(t *testing.T) {
 	assert.Equal(t, ret, Number(3))
 	ret, _ = Eval([]Expression{"define", "x", "3"}, builtinEnv)
 	ret, _ = Eval("x", builtinEnv)
-	assert.Equal(t, ret, Number(3))
+	assert.Equal(t, Number(3), ret)
 	Eval([]Expression{"define", []Expression{"fn", "y"}, []Expression{"+", "x", "y"}}, builtinEnv)
 	ret, _ = Eval([]Expression{"fn", "x"}, builtinEnv)
 	assert.Equal(t, Number(6), ret)
@@ -327,7 +328,8 @@ func TestEval7(t *testing.T) {
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
-		ret, _ := EvalAll(strToToken(c.input), env)
+		ret, err := EvalAll(strToToken(c.input), env)
+		fmt.Println(err)
 		assert.Equal(t, c.expected, ret)
 	}
 }

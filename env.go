@@ -364,9 +364,13 @@ func isList(exp Expression) bool {
 }
 
 func setupBuiltinEnv() *Env {
+	initSyntax()
 	var builtinEnv = &Env{
 		outer: nil,
 		frame: make(map[Symbol]Expression),
+	}
+	for key, syntax := range SyntaxMap {
+		builtinEnv.Set(Symbol(key), syntax)
 	}
 	for k, fn := range builtinFunctions {
 		builtinEnv.Set(k, fn)

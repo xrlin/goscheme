@@ -18,6 +18,46 @@ func (s String) String() string {
 	return "\"" + string(s) + "\""
 }
 
+var SyntaxMap = make(map[string]*Syntax)
+
+type SyntaxFunc func(args []Expression, env *Env) (Expression, error)
+
+type Syntax struct {
+	fn   SyntaxFunc
+	name string
+}
+
+func (s *Syntax) String() string {
+	return fmt.Sprintf("#[Syntax %s]", s.name)
+}
+
+func (s *Syntax) Eval(args []Expression, env *Env) (Expression, error) {
+	return s.fn(args, env)
+}
+
+func NewSyntax(name string, fn SyntaxFunc) *Syntax {
+	return &Syntax{fn, name}
+}
+
+func initSyntax() {
+	SyntaxMap["define"] = NewSyntax("define", evalDefine)
+	SyntaxMap["eval"] = NewSyntax("eval", evalEval)
+	SyntaxMap["apply"] = NewSyntax("apply", evalApply)
+	SyntaxMap["if"] = NewSyntax("if", evalIf)
+	SyntaxMap["cond"] = NewSyntax("cond", evalCond)
+	SyntaxMap["begin"] = NewSyntax("begin", evalBegin)
+	SyntaxMap["lambda"] = NewSyntax("lambda", evalLambda)
+	SyntaxMap["load"] = NewSyntax("load", evalLoad)
+	SyntaxMap["delay"] = NewSyntax("delay", evalDelay)
+	SyntaxMap["and"] = NewSyntax("and", evalAnd)
+	SyntaxMap["or"] = NewSyntax("and", evalOr)
+	SyntaxMap["let"] = NewSyntax("let", evalLet)
+	SyntaxMap["let*"] = NewSyntax("let*", evalL2RLet)
+	SyntaxMap["letrec"] = NewSyntax("letrec", evalLetRec)
+	SyntaxMap["quote"] = NewSyntax("quote", evalQuote)
+	SyntaxMap["set!"] = NewSyntax("set!", evalSet)
+}
+
 type Symbol string
 
 type Quote string
@@ -217,8 +257,8 @@ func IsSyntaxExpression(exp Expression) bool {
 	}
 	operator := ops[0]
 
-	for _, s := range syntaxes {
-		if s == operator {
+	for key := range SyntaxMap {
+		if key == operator {
 			return true
 		}
 	}
@@ -233,7 +273,7 @@ func IsSymbol(expression Expression) bool {
 	if _, ok := expression.(string); !ok {
 		return false
 	}
-	if IsNumber(expression) || IsString(expression) || IsBoolean(expression) || IsSyntaxExpression(expression) {
+	if IsNumber(expression) || IsString(expression) || IsBoolean(expression) {
 		return false
 	}
 	return true
@@ -424,8 +464,17 @@ func valueToString(exp Expression) string {
 }
 
 func IsPrimitiveExpression(exp Expression) bool {
-	if isNullExp(exp) || isUndefObj(exp) || IsNumber(exp) || IsBoolean(exp) || IsString(exp) {
+	if isNullExp(exp) || isUndefObj(exp) ||
+		IsQuote(exp) || IsNumber(exp) ||
+		IsBoolean(exp) || IsString(exp) ||
+		IsThunk(exp) || IsPair(exp) ||
+		isList(exp) || isLambdaType(exp) {
 		return true
 	}
 	return false
+}
+
+func IsQuote(exp Expression) bool {
+	_, ok := exp.(Quote)
+	return ok
 }
