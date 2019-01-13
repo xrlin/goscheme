@@ -7,19 +7,21 @@ import (
 
 func TestEval(t *testing.T) {
 	builtinEnv := setupBuiltinEnv()
-	ret := Eval("3", builtinEnv)
+	ret, _ := Eval("3", builtinEnv)
 	assert.Equal(t, ret, Number(3))
-	ret = Eval([]Expression{"define", "x", "3"}, builtinEnv)
-	assert.Equal(t, Eval("x", builtinEnv), Number(3))
+	ret, _ = Eval([]Expression{"define", "x", "3"}, builtinEnv)
+	ret, _ = Eval("x", builtinEnv)
+	assert.Equal(t, ret, Number(3))
 	Eval([]Expression{"define", []Expression{"fn", "y"}, []Expression{"+", "x", "y"}}, builtinEnv)
-	assert.Equal(t, Number(6), Eval([]Expression{"fn", "x"}, builtinEnv))
+	ret, _ = Eval([]Expression{"fn", "x"}, builtinEnv)
+	assert.Equal(t, Number(6), ret)
 
 	// test begin
-	ret = Eval([]Expression{"begin", "1"}, builtinEnv)
+	ret, _ = Eval([]Expression{"begin", "1"}, builtinEnv)
 	assert.Equal(t, Number(1), ret)
-	ret = Eval([]Expression{"begin", "#t"}, builtinEnv)
+	ret, _ = Eval([]Expression{"begin", "#t"}, builtinEnv)
 	assert.Equal(t, true, ret)
-	ret = Eval([]Expression{"begin", "1", []Expression{"+", "1", "2", "3"}}, builtinEnv)
+	ret, _ = Eval([]Expression{"begin", "1", []Expression{"+", "1", "2", "3"}}, builtinEnv)
 	assert.Equal(t, Number(6), ret)
 
 	// test if
@@ -31,7 +33,7 @@ func TestEval(t *testing.T) {
 		{[]Expression{"if", "#f", "1", "0"}, Number(0)},
 	}
 	for _, c := range testCases {
-		ret = Eval(c.input, builtinEnv)
+		ret, _ = Eval(c.input, builtinEnv)
 		assert.Equal(t, c.expected, ret)
 	}
 
@@ -46,7 +48,7 @@ func TestEval(t *testing.T) {
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"else", `"else clause"`}}, String(`else clause`)},
 	}
 	for _, c := range testCases {
-		ret = Eval(c.input, builtinEnv)
+		ret, _ = Eval(c.input, builtinEnv)
 		assert.Equal(t, c.expected, ret)
 	}
 
@@ -60,12 +62,13 @@ func TestEval(t *testing.T) {
 		{"\"test\n\"", String("test\n")},
 	}
 	for _, c := range testCases {
-		ret = Eval(c.input, builtinEnv)
+		ret, _ = Eval(c.input, builtinEnv)
 		assert.Equal(t, c.expected, ret)
 	}
 
 	// test lambda
-	assert.Equal(t, Number(3), EvalAll(strToToken("((lambda (x y) (+ x y)) 1 2)"), builtinEnv))
+	ret, _ = EvalAll(strToToken("((lambda (x y) (+ x y)) 1 2)"), builtinEnv)
+	assert.Equal(t, Number(3), ret)
 
 	// test recursion
 	tz := NewTokenizerFromString(
@@ -94,7 +97,7 @@ func TestEval(t *testing.T) {
 		{[]Expression{"fact2", "0"}, Number(1)},
 	}
 	for _, c := range testCases {
-		ret = Eval(c.input, builtinEnv)
+		ret, _ = Eval(c.input, builtinEnv)
 		assert.Equal(t, c.expected, ret)
 	}
 
@@ -106,46 +109,67 @@ func TestEval(t *testing.T) {
 		{[]Expression{"cons", "1", "2"}, &Pair{Number(1), Number(2)}},
 	}
 	for _, c := range testCases {
-		ret = Eval(c.input, builtinEnv)
+		ret, _ = Eval(c.input, builtinEnv)
 		assert.Equal(t, c.expected, ret)
 	}
-	assert.Equal(t, &Pair{Number(1), Number(2)}, Eval([]Expression{"cons", "1", "2"}, builtinEnv))
+	ret, _ = Eval([]Expression{"cons", "1", "2"}, builtinEnv)
+	assert.Equal(t, &Pair{Number(1), Number(2)}, ret)
 
 	//// test list
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, Eval([]Expression{"list", "1", "2"}, builtinEnv))
-	assert.Equal(t, &Pair{Number(1), NilObj}, Eval([]Expression{"list", "1"}, builtinEnv))
-	assert.Equal(t, NilObj, Eval([]Expression{"list"}, builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{&Pair{Number(1), NilObj}, NilObj}}, Eval([]Expression{"list", "1", []Expression{"cons", "1", []Expression{}}}, builtinEnv))
+	ret, _ = Eval([]Expression{"list", "1", "2"}, builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, ret)
+	ret, _ = Eval([]Expression{"list", "1"}, builtinEnv)
+	assert.Equal(t, &Pair{Number(1), NilObj}, ret)
+	ret, _ = Eval([]Expression{"list"}, builtinEnv)
+	assert.Equal(t, NilObj, ret)
+	ret, _ = Eval([]Expression{"list", "1", []Expression{"cons", "1", []Expression{}}}, builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{&Pair{Number(1), NilObj}, NilObj}}, ret)
 
 	//// test append
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(append (cons 1 ()) 2)"), builtinEnv))
-	assert.Equal(t, &Pair{Number(2), NilObj}, EvalAll(strToToken("(append () 2)"), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()))"), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), NilObj}, EvalAll(strToToken("(append (cons 1 ()) ())"), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("(append (cons 1 ()) 2 3)"), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()) (cons 3 ()))"), builtinEnv))
+	ret, _ = EvalAll(strToToken("(append (cons 1 ()) 2)"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, ret)
+	ret, _ = EvalAll(strToToken("(append () 2)"), builtinEnv)
+	assert.Equal(t, &Pair{Number(2), NilObj}, ret)
+	ret, _ = EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()))"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, ret)
+	ret, _ = EvalAll(strToToken("(append (cons 1 ()) ())"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), NilObj}, ret)
+	ret, _ = EvalAll(strToToken("(append (cons 1 ()) 2 3)"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, ret)
+	ret, _ = EvalAll(strToToken("(append (cons 1 ()) (cons 2 ()) (cons 3 ()))"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), &Pair{Number(3), NilObj}}}, ret)
 
 	// test quote
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("(quote (1 2))"), builtinEnv))
-	assert.Equal(t, Number(1), EvalAll(strToToken("(quote 1)"), builtinEnv))
-	assert.Equal(t, String("x"), EvalAll(strToToken(`(quote "x")`), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{String("x"), NilObj}}, EvalAll(strToToken(`(quote (1 "x"))`), builtinEnv))
-	assert.Equal(t, &Pair{Quote("cons"), &Pair{Number(1), &Pair{String("x"), NilObj}}}, EvalAll(strToToken(`(quote (cons 1 "x"))`), builtinEnv))
+	ret, _ = EvalAll(strToToken("(quote (1 2))"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, ret)
+	ret, _ = EvalAll(strToToken("(quote 1)"), builtinEnv)
+	assert.Equal(t, Number(1), ret)
+	ret, _ = EvalAll(strToToken(`(quote "x")`), builtinEnv)
+	assert.Equal(t, String("x"), ret)
+	ret, _ = EvalAll(strToToken(`(quote (1 "x"))`), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{String("x"), NilObj}}, ret)
+	ret, _ = EvalAll(strToToken(`(quote (cons 1 "x"))`), builtinEnv)
+	assert.Equal(t, &Pair{Quote("cons"), &Pair{Number(1), &Pair{String("x"), NilObj}}}, ret)
+	ret, _ = EvalAll(strToToken(`(quote (1 (2 3) 4))`), builtinEnv)
 	assert.Equal(t, &Pair{
 		Number(1),
 		&Pair{
 			&Pair{Number(2), &Pair{Number(3), NilObj}}, &Pair{Number(4), NilObj}}},
-		EvalAll(strToToken(`(quote (1 (2 3) 4))`), builtinEnv))
-	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, EvalAll(strToToken("'(1 2)"), builtinEnv))
-	assert.Equal(t, Quote("x"), EvalAll(strToToken("'x"), builtinEnv))
-	assert.Equal(t, &Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, EvalAll(strToToken("'(cons define 3)"), builtinEnv))
-	assert.Equal(t, &Pair{Quote("quote"), &Pair{&Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, NilObj}}, EvalAll(strToToken("''(cons define 3)"), builtinEnv))
+		ret)
+	ret, _ = EvalAll(strToToken("'(1 2)"), builtinEnv)
+	assert.Equal(t, &Pair{Number(1), &Pair{Number(2), NilObj}}, ret)
+	ret, _ = EvalAll(strToToken("'x"), builtinEnv)
+	assert.Equal(t, Quote("x"), ret)
+	ret, _ = EvalAll(strToToken("'(cons define 3)"), builtinEnv)
+	assert.Equal(t, &Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, ret)
+	ret, _ = EvalAll(strToToken("''(cons define 3)"), builtinEnv)
+	assert.Equal(t, &Pair{Quote("quote"), &Pair{&Pair{Quote("cons"), &Pair{Quote("define"), &Pair{Number(3), NilObj}}}, NilObj}}, ret)
 }
 
 // test built in procedures
 func TestEval2(t *testing.T) {
-	env := setupBuiltinEnv()
-	EvalAll(strToToken(`(display-pascal-indents 3 1)`), env)
+	//env := setupBuiltinEnv()
+	//_, err := EvalAll(strToToken(`(display-pascal-indents 3 1)`), env)
 }
 
 // test comment
@@ -181,7 +205,8 @@ func TestEval3(t *testing.T) {
 	}
 	env := setupBuiltinEnv()
 	for _, c := range testCases {
-		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+		ret, _ := EvalAll(strToToken(c.input), env)
+		assert.Equal(t, c.expected, ret)
 	}
 }
 
@@ -214,13 +239,17 @@ func TestEval4(t *testing.T) {
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
-		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+		ret, _ := EvalAll(strToToken(c.input), env)
+		assert.Equal(t, c.expected, ret)
 	}
 	// test nothing panic
 	env := setupBuiltinEnv()
-	assert.Equal(t, undefObj, Eval([]Expression{"load", "\"test.scm\""}, env))
-	assert.Equal(t, undefObj, Eval([]Expression{"load", "\"test\""}, env))
-	assert.Equal(t, undefObj, Eval([]Expression{"load", []Expression{"quote", []Expression{"test.scm"}}}, env))
+	ret, _ := Eval([]Expression{"load", "\"test.scm\""}, env)
+	assert.Equal(t, undefObj, ret)
+	ret, _ = Eval([]Expression{"load", "\"test\""}, env)
+	assert.Equal(t, undefObj, ret)
+	ret, _ = Eval([]Expression{"load", []Expression{"quote", []Expression{"test.scm"}}}, env)
+	assert.Equal(t, undefObj, ret)
 	_, err := env.Find("test-method")
 	assert.Nil(t, err)
 }
@@ -239,7 +268,8 @@ func TestEval5(t *testing.T) {
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
-		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+		ret, _ := EvalAll(strToToken(c.input), env)
+		assert.Equal(t, c.expected, ret)
 	}
 }
 
@@ -251,11 +281,12 @@ func TestEval6(t *testing.T) {
 	}{
 		{`(or 1 unbound-syntax)`, true},
 		// eval error
-		{`(and 1 unbound-syntax)`, nil},
+		{`(and 1 unbound-syntax)`, undefObj},
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
-		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+		ret, _ := EvalAll(strToToken(c.input), env)
+		assert.Equal(t, c.expected, ret)
 	}
 }
 
@@ -276,28 +307,28 @@ func TestEval7(t *testing.T) {
          				(z (+ x y)))
 						(* z x)))`, Number(70)},
 		{`(letrec (
-					(zero? (lambda (x) (= x 0))) 
+					(zero? (lambda (x) (= x 0)))
 					(even?
-          			(lambda (n)
-            			(if (zero? n)
-                			#t
+         			(lambda (n)
+           			(if (zero? n)
+               			#t
 							(odd? (- n 1)))))
 					(odd?
 						(lambda (n)
-            				(if (zero? n)
-                				#f
-                				(even? (- n 1))))))
+           				(if (zero? n)
+               				#f
+               				(even? (- n 1))))))
 				(even? 88))`, true},
 		{`(letrec ((b a) (a 1)) b)`, undefObj},
-		//{`(define (f a)
-		//			(let ((b 3)) (set! a 3))
-		//			a)
-		//		(f 4)`, Number(3)},
-
+		{`(define (f a)
+					(let ((b 3)) (set! a 3))
+					a)
+				(f 4)`, Number(3)},
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
-		assert.Equal(t, c.expected, EvalAll(strToToken(c.input), env))
+		ret, _ := EvalAll(strToToken(c.input), env)
+		assert.Equal(t, c.expected, ret)
 	}
 }
 

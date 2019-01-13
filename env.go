@@ -1,6 +1,7 @@
 package goscheme
 
 import (
+	"errors"
 	"fmt"
 	"os"
 )
@@ -39,95 +40,141 @@ func (e *Env) Symbols() []Symbol {
 	return ret
 }
 
-func exitFunc(args ...Expression) Expression {
+func exitFunc(args ...Expression) (Expression, error) {
 	exit <- os.Interrupt
-	return NilObj
+	return NilObj, nil
 }
 
-func addFunc(args ...Expression) Expression {
+func addFunc(args ...Expression) (Expression, error) {
 	var ret Number
 	for _, arg := range args {
-		ret = ret + expressionToNumber(arg)
+		num, err := expressionToNumber(arg)
+		if err != nil {
+			return 0, err
+		}
+		ret = ret + num
 	}
-	return ret
+	return ret, nil
 }
 
-func minusFunc(args ...Expression) Expression {
+func minusFunc(args ...Expression) (Expression, error) {
 	var ret Number
-	ret = expressionToNumber(args[0])
+	ret, err := expressionToNumber(args[0])
+	if err != nil {
+		return undefObj, err
+	}
 	for i, arg := range args {
 		if i == 0 {
 			continue
 		}
-		ret = ret - expressionToNumber(arg)
+		num, err := expressionToNumber(arg)
+		if err != nil {
+			return undefObj, err
+		}
+		ret = ret - num
 	}
-	return ret
+	return ret, nil
 }
 
-func plusFunc(args ...Expression) Expression {
+func plusFunc(args ...Expression) (Expression, error) {
 	var ret Number = 1
 	for _, arg := range args {
-		ret = ret * expressionToNumber(arg)
+		num, err := expressionToNumber(arg)
+		if err != nil {
+			return undefObj, err
+		}
+		ret = ret * num
 	}
-	return ret
+	return ret, nil
 }
 
-func divFunc(args ...Expression) Expression {
+func divFunc(args ...Expression) (Expression, error) {
 	var ret Number = 1
-	ret = expressionToNumber(args[0])
+	ret, err := expressionToNumber(args[0])
+	if err != nil {
+		return undefObj, err
+	}
 	for i, arg := range args {
 		if i == 0 {
 			continue
 		}
-		ret = ret / expressionToNumber(arg)
+		num, err := expressionToNumber(arg)
+		if err != nil {
+			return undefObj, err
+		}
+		ret = ret / num
 	}
-	return ret
+	return ret, nil
 }
 
-func eqlFunc(args ...Expression) Expression {
+func eqlFunc(args ...Expression) (Expression, error) {
 	if args[0] == args[1] {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
-func lessFunc(args ...Expression) Expression {
-	op1 := expressionToNumber(args[0])
-	op2 := expressionToNumber(args[1])
+func lessFunc(args ...Expression) (Expression, error) {
+	op1, err := expressionToNumber(args[0])
+	if err != nil {
+		return undefObj, err
+	}
+	op2, err := expressionToNumber(args[1])
+	if err != nil {
+		return undefObj, err
+	}
 	if op1 < op2 {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
-func greaterFunc(args ...Expression) Expression {
-	op1 := expressionToNumber(args[0])
-	op2 := expressionToNumber(args[1])
+func greaterFunc(args ...Expression) (Expression, error) {
+	op1, err := expressionToNumber(args[0])
+	if err != nil {
+		return undefObj, err
+	}
+	op2, err := expressionToNumber(args[1])
+	if err != nil {
+		return undefObj, err
+	}
 	if op1 > op2 {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
-func lessEqualFunc(args ...Expression) Expression {
-	op1 := expressionToNumber(args[0])
-	op2 := expressionToNumber(args[1])
+func lessEqualFunc(args ...Expression) (Expression, error) {
+	op1, err := expressionToNumber(args[0])
+	if err != nil {
+		return undefObj, err
+	}
+	op2, err := expressionToNumber(args[1])
+	if err != nil {
+		return undefObj, err
+	}
 	if op1 <= op2 {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
-func greatEqualFunc(args ...Expression) Expression {
-	op1 := expressionToNumber(args[0])
-	op2 := expressionToNumber(args[1])
+func greatEqualFunc(args ...Expression) (Expression, error) {
+	op1, err := expressionToNumber(args[0])
+	if err != nil {
+		return undefObj, err
+	}
+	op2, err := expressionToNumber(args[1])
+	if err != nil {
+		return undefObj, err
+	}
 	if op1 >= op2 {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
-func displayFunc(args ...Expression) Expression {
+func displayFunc(args ...Expression) (Expression, error) {
 	exp := args[0]
 	switch v := exp.(type) {
 	case String:
@@ -135,65 +182,47 @@ func displayFunc(args ...Expression) Expression {
 	default:
 		fmt.Printf("%v", valueToString(v))
 	}
-	return undefObj
+	return undefObj, nil
 }
 
-func displaylnFunc(args ...Expression) Expression {
-	ret := displayFunc(args...)
+func displaylnFunc(args ...Expression) (Expression, error) {
+	ret, err := displayFunc(args...)
 	fmt.Println()
-	return ret
+	return ret, err
 }
 
-func isNullFunc(args ...Expression) Expression {
-	return isNullExp(args[0])
+func isNullFunc(args ...Expression) (Expression, error) {
+	return isNullExp(args[0]), nil
 }
 
-func isStringFunc(args ...Expression) Expression {
+func isStringFunc(args ...Expression) (Expression, error) {
 	exp := args[0]
-	return IsString(exp)
+	return IsString(exp), nil
 }
 
-func notFunc(args ...Expression) Expression {
-	return !IsTrue(args[0])
-}
-
-func andFunc(args ...Expression) Expression {
-	for _, exp := range args {
-		if !IsTrue(exp) {
-			return false
-		}
-	}
-	return true
-}
-
-func orFunc(args ...Expression) Expression {
-	for _, exp := range args {
-		if IsTrue(exp) {
-			return true
-		}
-	}
-	return false
+func notFunc(args ...Expression) (Expression, error) {
+	return !IsTrue(args[0]), nil
 }
 
 // concatFunc concat the strings
-func concatFunc(args ...Expression) Expression {
+func concatFunc(args ...Expression) (Expression, error) {
 	var ret String
 	for _, arg := range args {
 		v := arg
 		s, ok := v.(String)
 		if !ok {
-			panic(fmt.Sprintf("argument %v is not a String", v))
+			return undefObj, errors.New(fmt.Sprintf("argument %v is not a String", v))
 		}
 		ret += s
 	}
-	return ret
+	return ret, nil
 }
 
-func checkThunkFunc(args ...Expression) Expression {
-	return IsThunk(args[0])
+func checkThunkFunc(args ...Expression) (Expression, error) {
+	return IsThunk(args[0]), nil
 }
 
-func forceFunc(args ...Expression) Expression {
+func forceFunc(args ...Expression) (Expression, error) {
 	return ActualValue(args[0])
 }
 
@@ -227,81 +256,100 @@ var builtinFunctions = map[Symbol]Function{
 	"force":    NewFunction("thunk?", forceFunc, 1, 1),
 }
 
-func setCarImpl(args ...Expression) Expression {
+func setCarImpl(args ...Expression) (Expression, error) {
 	exp := args[0]
 	newValue := args[1]
 	switch p := exp.(type) {
 	case *Pair:
 		p.Car = newValue
 	default:
-		panic(fmt.Sprintf("%v is not a pair", exp))
+		return undefObj, errors.New(fmt.Sprintf("%v is not a pair", exp))
 	}
-	return undefObj
+	return undefObj, nil
 }
 
-func setCdrImpl(args ...Expression) Expression {
+func setCdrImpl(args ...Expression) (Expression, error) {
 	exp := args[0]
 	newValue := args[1]
 	switch p := exp.(type) {
 	case *Pair:
 		p.Cdr = newValue
 	default:
-		panic(fmt.Sprintf("%v is not a pair", exp))
+		return undefObj, errors.New(fmt.Sprintf("%v is not a pair", exp))
 	}
-	return undefObj
+	return undefObj, nil
 }
 
-func consImpl(args ...Expression) Expression {
-	return &Pair{args[0], args[1]}
+func consImpl(args ...Expression) (Expression, error) {
+	return &Pair{args[0], args[1]}, nil
 }
 
-func listImpl(args ...Expression) Expression {
+func listImpl(args ...Expression) (Expression, error) {
 	if len(args) == 0 {
-		return NilObj
+		return NilObj, nil
 	}
-	return &Pair{args[0], listImpl(args[1:]...)}
+	cdr, err := listImpl(args[1:]...)
+	if err != nil {
+		return NilObj, err
+	}
+	return &Pair{args[0], cdr}, nil
 }
 
-func carImpl(args ...Expression) Expression {
+func carImpl(args ...Expression) (Expression, error) {
 	v := args[0]
 	switch p := v.(type) {
 	case *Pair:
-		return p.Car
+		return p.Car, nil
 	default:
-		panic("argument is not a pair")
+		return undefObj, errors.New("argument is not a pair")
 	}
 }
 
-func cdrImpl(args ...Expression) Expression {
+func cdrImpl(args ...Expression) (Expression, error) {
 	v := args[0]
 	switch p := v.(type) {
 	case *Pair:
-		return p.Cdr
+		return p.Cdr, nil
 	default:
-		panic("argument is not a pair")
+		return undefObj, errors.New("argument is not a pair")
 	}
 }
 
-func appendImpl(args ...Expression) Expression {
-	ret := args[0]
+func appendImpl(args ...Expression) (ret Expression, err error) {
+	ret = args[0]
 	for i := 1; i < len(args); i++ {
-		ret = merge(ret, args[i])
+		ret, err = merge(ret, args[i])
+		if err != nil {
+			return undefObj, err
+		}
 	}
-	return ret
+	return ret, nil
 }
 
 // append arg2 to arg1 and return the new *pair
-func merge(arg1, arg2 Expression) Expression {
+func merge(arg1, arg2 Expression) (Expression, error) {
 	if !isList(arg1) {
-		panic("not a list")
+		return undefObj, errors.New("not a list")
 	}
 	if isNullExp(arg1) {
 		if isList(arg2) {
-			return arg2
+			return arg2, nil
 		}
 		return listImpl(arg2)
 	}
-	return consImpl(carImpl(arg1), merge(cdrImpl(arg1), arg2))
+	rest, err := cdrImpl(arg1)
+	if err != nil {
+		return undefObj, err
+	}
+	newArg, err := merge(rest, arg2)
+	if err != nil {
+		return undefObj, err
+	}
+	car, err := carImpl(arg1)
+	if err != nil {
+		return NilObj, err
+	}
+	return consImpl(car, newArg)
 }
 
 func isList(exp Expression) bool {

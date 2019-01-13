@@ -24,7 +24,7 @@ type Quote string
 
 type Boolean bool
 
-type commonFunction func(args ...Expression) Expression
+type commonFunction func(args ...Expression) (Expression, error)
 
 type Function struct {
 	name     string
@@ -33,9 +33,9 @@ type Function struct {
 	maxArgs  int
 }
 
-func (f Function) Call(args ...Expression) Expression {
+func (f Function) Call(args ...Expression) (Expression, error) {
 	if err := f.validateArgCount(args...); err != nil {
-		panic(err)
+		return undefObj, err
 	}
 	return f.function(args...)
 }
@@ -91,18 +91,24 @@ func (t Thunk) String() string {
 }
 
 // Value returns the actual value of the thunk
-func (t *Thunk) Value() Expression {
+func (t *Thunk) Value() (Expression, error) {
 	if t.ret != nil {
-		return t.ret
+		return t.ret, nil
 	}
-	value := Eval(t.Exp, t.Env)
+	value, err := Eval(t.Exp, t.Env)
+	if err != nil {
+		return undefObj, err
+	}
 	switch t2 := value.(type) {
 	case *Thunk:
-		value = t2.Value()
+		value, err = t2.Value()
 	default:
 	}
+	if err != nil {
+		return undefObj, err
+	}
 	t.ret = value
-	return t.ret
+	return t.ret, nil
 }
 
 // IsThunk checks whether an expression is a thunk and return the result
@@ -122,12 +128,12 @@ func NewThunk(exp Expression, env *Env) *Thunk {
 
 // ActualValue returns the actual value of an expression.
 // If the expression is a Thunk, eval and return the result, otherwise return the expression itself.
-func ActualValue(exp Expression) Expression {
+func ActualValue(exp Expression) (Expression, error) {
 	switch p := exp.(type) {
 	case *Thunk:
 		return p.Value()
 	default:
-		return exp
+		return exp, nil
 	}
 }
 

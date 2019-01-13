@@ -3,9 +3,11 @@ package goscheme
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/c-bata/go-prompt"
 	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -55,25 +57,31 @@ func (i *Interpreter) clean() {
 
 }
 
-func (i *Interpreter) Run() {
+func (i *Interpreter) Run() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error raised: %v", r)
+			log.Println(err)
+		}
+	}()
 	if i.mode == Interactive {
 		i.runInInteractiveMode()
-		return
+		return nil
 	}
 	i.runNormal()
-
+	return nil
 }
 
-func (i *Interpreter) runNormal() {
+func (i *Interpreter) runNormal() error {
 	go i.checkExit()
 	i.check()
 	scanner := bufio.NewScanner(i.input)
 	for {
 		if eof := !scanner.Scan(); eof {
 			if i.indents() != 0 {
-				panic("syntax error: missing )")
+				return errors.New("syntax error: missing )")
 			}
-			return
+			return nil
 		}
 		b := scanner.Bytes()
 		i.currentLineScript = b
@@ -85,9 +93,12 @@ func (i *Interpreter) runNormal() {
 			expTokens, err := Parse(&tokens)
 			if err != nil {
 				fmt.Printf("%s\n", err)
-				continue
+				return err
 			}
-			EvalAll(expTokens, i.env)
+			_, err = EvalAll(expTokens, i.env)
+			if err != nil {
+				return err
+			}
 			i.currentFragment = make([]byte, 0, 10)
 		}
 	}
@@ -225,8 +236,11 @@ func (i *Interpreter) evalPromptInput(input string) {
 			i.print(fmt.Sprintf("%s\n", err), prompt.Red)
 			return
 		}
-		ret := EvalAll(expTokens, i.env)
-		if shouldPrint(ret) {
+		ret, err := EvalAll(expTokens, i.env)
+		if err != nil {
+			i.print(fmt.Sprintf("err:=>%s\n", err), prompt.Red)
+		}
+		if shouldPrint(ret) && err == nil {
 			i.print(fmt.Sprintf("#=>%s\n", valueToString(ret)), prompt.Green)
 		}
 		i.currentFragment = make([]byte, 0, 10)
