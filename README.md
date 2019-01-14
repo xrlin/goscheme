@@ -1,5 +1,5 @@
 # GoScheme
-Yet, just an another shceme interpreter written in Go.
+Just another shceme interpreter written in Go.
 
 ## Installation
 
@@ -18,6 +18,50 @@ goscheme
 # Run a scheme file
 goscheme test.scm
 ```
+
+## Example
+
+* calculate nth fibonacci number
+
+    ```scheme
+    ; calculate nth fibonacci number
+    (define (fib n)
+       (if (<= n 2) 1 (+ (fib (- n 1)) (fib (- n 2)))))
+    
+    (fib 10)
+     
+    ;#=> 55
+     
+    ; calculate nth fibnacci number in tail recursion
+    (define (fib2 n)
+       (begin (define (fib-iter a b n)
+             (if (= n 0) b (fib-iter b (+ a b) (- n 1))))
+       (fib-iter 0 1 (- n 1))))
+    (fib2 30)
+    ;#=>832040
+    ```
+
+* Internal definition
+
+    ```scheme
+    (letrec (
+        (zero? (lambda (x) (= x 0)))
+        (even?
+        (lambda (n)
+        (if (zero? n)
+            #t
+            (odd? (- n 1)))))
+        (odd?
+            (lambda (n)
+            (if (zero? n)
+                #f
+                (even? (- n 1))))))
+    (even? 88))
+    ;#=>#t
+    ```
+
+Explore `example.scm` for more examples.
+
 
 ## Features
 

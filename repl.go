@@ -150,7 +150,9 @@ func (i *Interpreter) checkExit() {
 }
 
 func (i *Interpreter) printTips() {
-	fmt.Println("Welcome to goscheme")
+	fmt.Println(
+		`Welcome to goscheme.
+Enter '(exit)' or CTRL+D to exit.`)
 }
 
 func (i *Interpreter) indents() int {
