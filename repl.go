@@ -203,11 +203,6 @@ func (i *Interpreter) completer(d prompt.Document) (ret []prompt.Suggest) {
 	if key == "" {
 		return
 	}
-	for _, s := range syntaxes {
-		if strings.HasPrefix(s, key) {
-			ret = append(ret, prompt.Suggest{Text: completeText(s), Description: s})
-		}
-	}
 	for _, s := range i.env.Symbols() {
 		if strings.HasPrefix(string(s), key) {
 			ret = append(ret, prompt.Suggest{Text: completeText(string(s)), Description: string(s)})

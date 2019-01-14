@@ -34,39 +34,50 @@ func Eval(exp Expression, env *Env) (ret Expression, err error) {
 			if !ok {
 				return undefObj, fmt.Errorf("%s is not a valid expression", exp)
 			}
-			fn, err := Eval(ops[0], env)
+			nextExp, newEnv, err := applyCallable(ops[0], ops[1:], env)
 			if err != nil {
-				return fn, err
+				return undefObj, err
 			}
-			switch p := fn.(type) {
-			case Function:
-				var args []Expression
-				for _, arg := range ops[1:] {
-					v, err := Eval(arg, env)
-					if err != nil {
-						return undefObj, err
-					}
-					args = append(args, v)
-				}
-				return p.Call(args...)
-			case *LambdaProcess:
-				newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
-				if len(ops[1:]) != len(p.params) {
-					return undefObj, errors.New(fmt.Sprintf("%v\n", p.String()) + "require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(ops[1:])) + " provide")
-				}
-				for i, arg := range ops[1:] {
-					val, err := Eval(arg, env)
-					if err != nil {
-						return undefObj, err
-					}
-					newEnv.Set(p.params[i], val)
-				}
-				exp = p.Body()
-				env = newEnv
-			default:
-				return undefObj, errors.New(fmt.Sprintf("%v is not callable", fn))
-			}
+			exp = nextExp
+			env = newEnv
 		}
+	}
+}
+
+// for tail recursion optimization, return the next expression will be executed and the new environment to execute the
+// next loop in eval
+func applyCallable(process Expression, argExpressions []Expression, env *Env) (Expression, *Env, error) {
+	fn, err := Eval(process, env)
+	if err != nil {
+		return fn, env, err
+	}
+	switch p := fn.(type) {
+	case Function:
+		var args []Expression
+		for _, arg := range argExpressions {
+			v, err := Eval(arg, env)
+			if err != nil {
+				return undefObj, env, err
+			}
+			args = append(args, v)
+		}
+		ret, err := p.Call(args...)
+		return ret, env, err
+	case *LambdaProcess:
+		newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
+		if len(argExpressions) != len(p.params) {
+			return undefObj, env, errors.New(fmt.Sprintf("%v\n", p.String()) + "require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(argExpressions)) + " provide")
+		}
+		for i, arg := range argExpressions {
+			val, err := Eval(arg, env)
+			if err != nil {
+				return undefObj, env, err
+			}
+			newEnv.Set(p.params[i], val)
+		}
+		return p.Body(), newEnv, nil
+	default:
+		return undefObj, env, errors.New(fmt.Sprintf("%v is not callable", fn))
 	}
 }
 
@@ -324,10 +335,6 @@ func expToString(exp Expression) (String, error) {
 	return String(m[0][1]), nil
 }
 
-func Apply(exp Expression) Expression {
-	return nil
-}
-
 func evalEval(args []Expression, env *Env) (Expression, error) {
 	if len(args) != 1 {
 		return undefObj, errors.New("syntax error (requires 1 argument)")
@@ -487,17 +494,6 @@ func evalLambda(args []Expression, env *Env) (Expression, error) {
 	return makeLambdaProcess(paramNames, body, env), nil
 }
 
-func isQuoteExpression(exp Expression) bool {
-	if exp == "quote" {
-		return true
-	}
-	ops, ok := exp.([]Expression)
-	if !ok {
-		return false
-	}
-	return ops[0] == "quote"
-}
-
 func evalDefine(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 2 {
 		return undefObj, errors.New("syntax error, require more than two arguments")
@@ -539,13 +535,6 @@ func transExpressionToSymbol(s Expression) (Symbol, error) {
 		return Symbol(s), nil
 	}
 	return "", errors.New(fmt.Sprintf("%v is not a symbol", s))
-}
-
-func getParamSymbols(input []string) (ret []Symbol) {
-	for _, s := range input {
-		ret = append(ret, Symbol(s))
-	}
-	return
 }
 
 func makeLambdaProcess(paramNames []Symbol, body []Expression, env *Env) *LambdaProcess {

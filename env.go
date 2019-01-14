@@ -37,10 +37,21 @@ func (e *Env) Symbols() []Symbol {
 	if e.outer != nil {
 		ret = append(ret, e.outer.Symbols()...)
 	}
+	return uniqueSymbols(ret)
+}
+
+func uniqueSymbols(a []Symbol) (ret []Symbol) {
+	m := make(map[Symbol]bool)
+	for _, sym := range a {
+		m[sym] = true
+	}
+	for key := range m {
+		ret = append(ret, key)
+	}
 	return ret
 }
 
-func exitFunc(args ...Expression) (Expression, error) {
+func exitFunc(_ ...Expression) (Expression, error) {
 	exit <- os.Interrupt
 	return NilObj, nil
 }
