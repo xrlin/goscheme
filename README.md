@@ -1,9 +1,10 @@
-<h1 style="text-align: center">GoScheme</h1>
-<p style="text-align:center">Just another shceme interpreter written in Go.</p>
-<p style="text-align:center"><img src="https://travis-ci.org/xrlin/goscheme.svg?branch=master">&nbsp;<img src="https://goreportcard.com/badge/github.com/xrlin/goscheme"></p>
-
-<p style="text-align: center">
-  <img width="600" height="200" src="https://raw.githubusercontent.com/xrlin/goscheme/master/screenshots/repl.gif">
+<p align="center">
+  <h1>GoScheme</h1><br>
+  Just another shceme interpreter written in Go.<br>
+  <img src="https://travis-ci.org/xrlin/goscheme.svg?branch=master">&nbsp;<img src="https://goreportcard.com/badge/github.com/xrlin/goscheme">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xrlin/goscheme/master/screenshots/repl.gif">
 </p>
 
 ## Installation
