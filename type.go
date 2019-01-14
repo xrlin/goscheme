@@ -62,8 +62,6 @@ type Symbol string
 
 type Quote string
 
-type Boolean bool
-
 type commonFunction func(args ...Expression) (Expression, error)
 
 type Function struct {
@@ -182,8 +180,6 @@ type NilType struct{}
 func (n NilType) String() string {
 	return "()"
 }
-
-var syntaxes = [...]string{"define", "lambda", "if", "let", "cond", "begin", "quote", "eval", "apply", "load", "delay", "and", "or", "let", "let*", "letrec", "set!"}
 
 var NilObj = NilType{}
 
