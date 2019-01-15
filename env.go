@@ -54,7 +54,7 @@ func uniqueSymbols(a []Symbol) (ret []Symbol) {
 
 func exitFunc(_ ...Expression) (Expression, error) {
 	exit <- os.Interrupt
-	return NilObj, nil
+	return UndefObj, nil
 }
 
 func addFunc(args ...Expression) (Expression, error) {

@@ -126,11 +126,13 @@ func (i *Interpreter) check() {
 }
 
 func (i *Interpreter) runInInteractiveMode() {
+	go i.checkExit()
 	i.printTips()
 	i.prompt.Run()
 }
 
 func (i *Interpreter) exitProcess() {
+	close(i.exit)
 	fmt.Println("\nExiting...")
 	os.Exit(0)
 }
