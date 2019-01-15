@@ -32,7 +32,7 @@ goscheme test.scm
 
 ## Examples
 
-* calculate nth fibonacci number
+* Calculate nth fibonacci number
 
     ```scheme
     ; calculate nth fibonacci number
