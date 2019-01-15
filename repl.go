@@ -34,13 +34,13 @@ func neededIndents(reader io.RuneReader) int {
 	return len(stack)
 }
 
-// Represents mode the interpreter will run
+// InterpreterMode represents mode the interpreter will run
 type InterpreterMode uint8
 
 const (
-	// Run as interactive shell
+	// Interactive set the interpreter running as interactive shell
 	Interactive InterpreterMode = iota
-	// Run a file or script
+	// NoneInteractive set the interpreter running in normal mode without shell.
 	NoneInteractive
 )
 

@@ -402,7 +402,7 @@ func loadFile(filePath string, env *Env) error {
 	}
 	f, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("load %s failed: %s\n", filePath, err)
+		return fmt.Errorf("load %s failed: %s", filePath, err)
 	}
 	i := NewFileInterpreterWithEnv(f, env)
 	return i.Run()

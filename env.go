@@ -17,13 +17,11 @@ func (e *Env) Find(symbol Symbol) (Expression, error) {
 	ret, ok := e.frame[symbol]
 	if ok {
 		return ret, nil
-	} else {
-		if e.outer == nil {
-			return nil, fmt.Errorf("symbol %v unbound", symbol)
-		} else {
-			return e.outer.Find(symbol)
-		}
 	}
+	if e.outer == nil {
+		return nil, fmt.Errorf("symbol %v unbound", symbol)
+	}
+	return e.outer.Find(symbol)
 }
 
 // Set a symbol and its value in current environment

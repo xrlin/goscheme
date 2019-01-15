@@ -14,7 +14,7 @@ type Expression interface{}
 // Number in scheme.
 type Number float64
 
-// Represents string in scheme.
+// String represents string in scheme.
 type String string
 
 // String return the string to display wrapping the low level string with quotes.
@@ -22,10 +22,10 @@ func (s String) String() string {
 	return "\"" + string(s) + "\""
 }
 
-// Contains all defined scheme syntax.
+// SyntaxMap contains all defined scheme syntax.
 var SyntaxMap = make(map[string]*Syntax)
 
-// The actual func to eval and translate the syntax.
+// SyntaxFunc specified the common func format for Syntax
 type SyntaxFunc func(args []Expression, env *Env) (Expression, error)
 
 // Syntax wrap a syntax and give method to eval it.
@@ -76,7 +76,7 @@ type Quote string
 
 type commonFunction func(args ...Expression) (Expression, error)
 
-// Builtin basic scheme function in pure go.
+// Function represents the basic scheme function in pure go.
 type Function struct {
 	name     string
 	function commonFunction
@@ -114,7 +114,7 @@ func (f Function) String() string {
 	return "#[BuiltinFunction]"
 }
 
-// NewFunc return a Function struct init with arguments.
+// NewFunction return a Function struct init with arguments.
 // minArgs, maxArgs define the arguments count limitation of Function. Set to -1 means no limitation.
 func NewFunction(funcName string, f commonFunction, minArgs int, maxArgs int) Function {
 	return Function{
@@ -191,7 +191,7 @@ func ActualValue(exp Expression) (Expression, error) {
 	}
 }
 
-// Represents Nil in scheme
+// NilType represents Nil in scheme
 type NilType struct{}
 
 // Strings returns the string representing NilType.
@@ -199,7 +199,7 @@ func (n NilType) String() string {
 	return "()"
 }
 
-// Object of NilType
+// NilObj is the common object of NilType
 var NilObj = NilType{}
 
 // Undef represents undefined expression value.
@@ -224,7 +224,7 @@ func extractList(expression Expression) (ret []Expression) {
 	}
 }
 
-// Common Undef object.
+// UndefObj is the common Undef object.
 var UndefObj = Undef{}
 
 // IsNumber check whether the expression represents Number.
@@ -390,7 +390,7 @@ func concatLambdaBodyToString(expressions []Expression) string {
 	return buf.String()
 }
 
-// Return the expressions of body.
+// Body returns the expressions of body.
 func (lambda *LambdaProcess) Body() Expression {
 	if len(lambda.body) == 1 {
 		return lambda.body[0]

@@ -16,7 +16,7 @@ func Tokenize(inputScript string) []string {
 // Tokenizer wraps the input to generate tokens.
 type Tokenizer struct {
 	Source       *bufio.Reader
-	Eof          bool
+	EOF          bool
 	currentCh    rune
 	currentToken string
 }
@@ -32,12 +32,12 @@ func NewTokenizerFromReader(input io.Reader) *Tokenizer {
 }
 
 func (t *Tokenizer) readAhead() {
-	if t.Eof {
+	if t.EOF {
 		return
 	}
 	r, _, err := t.Source.ReadRune()
 	if err == io.EOF {
-		t.Eof = true
+		t.EOF = true
 		return
 	}
 	t.currentCh = r
@@ -47,7 +47,7 @@ func (t *Tokenizer) readString() (string, bool) {
 	buf := make([]rune, 0, 10)
 	buf = append(buf, '"')
 	t.readAhead()
-	for !t.Eof && t.currentCh != '"' {
+	for !t.EOF && t.currentCh != '"' {
 		if t.currentCh == '\\' {
 			t.readAhead()
 			if t.currentCh == 'n' {
@@ -63,8 +63,8 @@ func (t *Tokenizer) readString() (string, bool) {
 		buf = append(buf, t.currentCh)
 		t.readAhead()
 	}
-	if t.Eof {
-		return "", !t.Eof
+	if t.EOF {
+		return "", !t.EOF
 	}
 	buf = append(buf, '"')
 	t.readAhead()
@@ -73,10 +73,10 @@ func (t *Tokenizer) readString() (string, bool) {
 
 func (t *Tokenizer) readSymbol() (string, bool) {
 	buf := make([]rune, 0, 1)
-	if t.Eof {
+	if t.EOF {
 		return "", false
 	}
-	for !t.Eof && isSymbolCh(t.currentCh) {
+	for !t.EOF && isSymbolCh(t.currentCh) {
 		buf = append(buf, t.currentCh)
 		t.readAhead()
 	}
@@ -91,7 +91,7 @@ func (t *Tokenizer) skipComment() {
 	for t.currentCh == ';' {
 		for t.currentCh != '\n' {
 			t.readAhead()
-			if t.Eof {
+			if t.EOF {
 				return
 			}
 		}
@@ -101,7 +101,7 @@ func (t *Tokenizer) skipComment() {
 
 func (t *Tokenizer) readNextToken() (string, bool) {
 
-	if t.Eof {
+	if t.EOF {
 		t.currentCh = 0
 		t.currentToken = ""
 		return "", false
@@ -109,10 +109,10 @@ func (t *Tokenizer) readNextToken() (string, bool) {
 
 	for t.currentCh == -1 || unicode.IsSpace(t.currentCh) {
 		t.readAhead()
-		if t.Eof {
+		if t.EOF {
 			t.currentToken = ""
 			t.currentCh = 0
-			t.Eof = true
+			t.EOF = true
 			return "", false
 		}
 	}
