@@ -127,7 +127,6 @@ func (i *Interpreter) check() {
 
 func (i *Interpreter) runInInteractiveMode() {
 	i.printTips()
-	go i.checkExit()
 	i.prompt.Run()
 }
 
@@ -138,11 +137,8 @@ func (i *Interpreter) exitProcess() {
 
 func (i *Interpreter) checkExit() {
 	signal.Notify(i.exit, os.Interrupt)
-	for {
-		select {
-		case <-i.exit:
-			i.exitProcess()
-		}
+	for range i.exit {
+		i.exitProcess()
 	}
 }
 
