@@ -1,6 +1,12 @@
 <h1 align="center">GoScheme</h1><br>
 <p align="center">Just another shceme interpreter written in Go.</p>
-<p align="center"><img src="https://travis-ci.org/xrlin/goscheme.svg?branch=master">&nbsp;<img src="https://goreportcard.com/badge/github.com/xrlin/goscheme"></p>
+<p align="center">
+  <img src="https://travis-ci.org/xrlin/goscheme.svg?branch=master">&nbsp;
+  <a href="https://godoc.org/github.com/xrlin/goscheme" rel="nofollow">
+    <img src="https://camo.githubusercontent.com/4953dcce3ef06016a8f872b20e3bf6cd65e99621/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f676f646f632d7265666572656e63652d3532373242342e737667" alt="godoc" style="max-width:100%;">
+  </a>&nbsp;
+  <a href="https://goreportcard.com/report/github.com/xrlin/goscheme"><img src="https://goreportcard.com/badge/github.com/xrlin/goscheme"></a>
+</p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/xrlin/goscheme/master/screenshots/repl.gif">

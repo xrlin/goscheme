@@ -6,11 +6,13 @@ import (
 	"os"
 )
 
+// Env represents the context of code.
 type Env struct {
 	outer *Env
 	frame map[Symbol]Expression
 }
 
+// Find search all the relative environments to find the variable matching symbol.
 func (e *Env) Find(symbol Symbol) (Expression, error) {
 	ret, ok := e.frame[symbol]
 	if ok {
@@ -24,6 +26,7 @@ func (e *Env) Find(symbol Symbol) (Expression, error) {
 	}
 }
 
+// Set a symbol and its value in current environment
 func (e *Env) Set(symbol Symbol, value Expression) {
 	e.frame[symbol] = value
 }
@@ -72,7 +75,7 @@ func minusFunc(args ...Expression) (Expression, error) {
 	var ret Number
 	ret, err := expressionToNumber(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	for i, arg := range args {
 		if i == 0 {
@@ -80,7 +83,7 @@ func minusFunc(args ...Expression) (Expression, error) {
 		}
 		num, err := expressionToNumber(arg)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		ret = ret - num
 	}
@@ -92,7 +95,7 @@ func plusFunc(args ...Expression) (Expression, error) {
 	for _, arg := range args {
 		num, err := expressionToNumber(arg)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		ret = ret * num
 	}
@@ -103,7 +106,7 @@ func divFunc(args ...Expression) (Expression, error) {
 	var ret Number = 1
 	ret, err := expressionToNumber(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	for i, arg := range args {
 		if i == 0 {
@@ -111,7 +114,7 @@ func divFunc(args ...Expression) (Expression, error) {
 		}
 		num, err := expressionToNumber(arg)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		ret = ret / num
 	}
@@ -128,11 +131,11 @@ func eqlFunc(args ...Expression) (Expression, error) {
 func lessFunc(args ...Expression) (Expression, error) {
 	op1, err := expressionToNumber(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	op2, err := expressionToNumber(args[1])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	if op1 < op2 {
 		return true, nil
@@ -143,11 +146,11 @@ func lessFunc(args ...Expression) (Expression, error) {
 func greaterFunc(args ...Expression) (Expression, error) {
 	op1, err := expressionToNumber(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	op2, err := expressionToNumber(args[1])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	if op1 > op2 {
 		return true, nil
@@ -158,11 +161,11 @@ func greaterFunc(args ...Expression) (Expression, error) {
 func lessEqualFunc(args ...Expression) (Expression, error) {
 	op1, err := expressionToNumber(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	op2, err := expressionToNumber(args[1])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	if op1 <= op2 {
 		return true, nil
@@ -173,11 +176,11 @@ func lessEqualFunc(args ...Expression) (Expression, error) {
 func greatEqualFunc(args ...Expression) (Expression, error) {
 	op1, err := expressionToNumber(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	op2, err := expressionToNumber(args[1])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	if op1 >= op2 {
 		return true, nil
@@ -193,7 +196,7 @@ func displayFunc(args ...Expression) (Expression, error) {
 	default:
 		fmt.Printf("%v", valueToString(v))
 	}
-	return undefObj, nil
+	return UndefObj, nil
 }
 
 func displaylnFunc(args ...Expression) (Expression, error) {
@@ -203,7 +206,7 @@ func displaylnFunc(args ...Expression) (Expression, error) {
 }
 
 func isNullFunc(args ...Expression) (Expression, error) {
-	return isNullExp(args[0]), nil
+	return IsNullExp(args[0]), nil
 }
 
 func isStringFunc(args ...Expression) (Expression, error) {
@@ -222,7 +225,7 @@ func concatFunc(args ...Expression) (Expression, error) {
 		v := arg
 		s, ok := v.(String)
 		if !ok {
-			return undefObj, errors.New(fmt.Sprintf("argument %v is not a String", v))
+			return UndefObj, fmt.Errorf("argument %v is not a String", v)
 		}
 		ret += s
 	}
@@ -274,9 +277,9 @@ func setCarImpl(args ...Expression) (Expression, error) {
 	case *Pair:
 		p.Car = newValue
 	default:
-		return undefObj, errors.New(fmt.Sprintf("%v is not a pair", exp))
+		return UndefObj, fmt.Errorf("%v is not a pair", exp)
 	}
-	return undefObj, nil
+	return UndefObj, nil
 }
 
 func setCdrImpl(args ...Expression) (Expression, error) {
@@ -286,9 +289,9 @@ func setCdrImpl(args ...Expression) (Expression, error) {
 	case *Pair:
 		p.Cdr = newValue
 	default:
-		return undefObj, errors.New(fmt.Sprintf("%v is not a pair", exp))
+		return UndefObj, fmt.Errorf("%v is not a pair", exp)
 	}
-	return undefObj, nil
+	return UndefObj, nil
 }
 
 func consImpl(args ...Expression) (Expression, error) {
@@ -312,7 +315,7 @@ func carImpl(args ...Expression) (Expression, error) {
 	case *Pair:
 		return p.Car, nil
 	default:
-		return undefObj, errors.New("argument is not a pair")
+		return UndefObj, errors.New("argument is not a pair")
 	}
 }
 
@@ -322,7 +325,7 @@ func cdrImpl(args ...Expression) (Expression, error) {
 	case *Pair:
 		return p.Cdr, nil
 	default:
-		return undefObj, errors.New("argument is not a pair")
+		return UndefObj, errors.New("argument is not a pair")
 	}
 }
 
@@ -331,7 +334,7 @@ func appendImpl(args ...Expression) (ret Expression, err error) {
 	for i := 1; i < len(args); i++ {
 		ret, err = merge(ret, args[i])
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 	}
 	return ret, nil
@@ -340,9 +343,9 @@ func appendImpl(args ...Expression) (ret Expression, err error) {
 // append arg2 to arg1 and return the new *pair
 func merge(arg1, arg2 Expression) (Expression, error) {
 	if !isList(arg1) {
-		return undefObj, errors.New("not a list")
+		return UndefObj, errors.New("not a list")
 	}
-	if isNullExp(arg1) {
+	if IsNullExp(arg1) {
 		if isList(arg2) {
 			return arg2, nil
 		}
@@ -350,11 +353,11 @@ func merge(arg1, arg2 Expression) (Expression, error) {
 	}
 	rest, err := cdrImpl(arg1)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	newArg, err := merge(rest, arg2)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	car, err := carImpl(arg1)
 	if err != nil {

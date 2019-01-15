@@ -8,33 +8,43 @@ import (
 	"strings"
 )
 
+// Expression represent the parsed tokens of scheme syntax tree or the low level builtin types.
 type Expression interface{}
 
+// Number in scheme.
 type Number float64
 
+// Represents string in scheme.
 type String string
 
+// String return the string to display wrapping the low level string with quotes.
 func (s String) String() string {
 	return "\"" + string(s) + "\""
 }
 
+// Contains all defined scheme syntax.
 var SyntaxMap = make(map[string]*Syntax)
 
+// The actual func to eval and translate the syntax.
 type SyntaxFunc func(args []Expression, env *Env) (Expression, error)
 
+// Syntax wrap a syntax and give method to eval it.
 type Syntax struct {
 	fn   SyntaxFunc
 	name string
 }
 
+// String return the string to display representing the syntax.
 func (s *Syntax) String() string {
 	return fmt.Sprintf("#[Syntax %s]", s.name)
 }
 
+// Eval runs the syntax and return the result.
 func (s *Syntax) Eval(args []Expression, env *Env) (Expression, error) {
 	return s.fn(args, env)
 }
 
+// NewSyntax construct a Syntax with custom name and SyntaxFunc
 func NewSyntax(name string, fn SyntaxFunc) *Syntax {
 	return &Syntax{fn, name}
 }
@@ -58,12 +68,15 @@ func initSyntax() {
 	SyntaxMap["set!"] = NewSyntax("set!", evalSet)
 }
 
+// Symbol represents the variable name in scheme.
 type Symbol string
 
+// Quote type in scheme
 type Quote string
 
 type commonFunction func(args ...Expression) (Expression, error)
 
+// Builtin basic scheme function in pure go.
 type Function struct {
 	name     string
 	function commonFunction
@@ -71,9 +84,10 @@ type Function struct {
 	maxArgs  int
 }
 
+// Call eval the function with args and returns the result.
 func (f Function) Call(args ...Expression) (Expression, error) {
 	if err := f.validateArgCount(args...); err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	return f.function(args...)
 }
@@ -95,6 +109,7 @@ func (f Function) validateArgCount(args ...Expression) error {
 	return nil
 }
 
+// String returns the message to display
 func (f Function) String() string {
 	return "#[BuiltinFunction]"
 }
@@ -110,7 +125,7 @@ func NewFunction(funcName string, f commonFunction, minArgs int, maxArgs int) Fu
 	}
 }
 
-// Thunk wraps expressoin for lazy execution
+// Thunk wraps expression for lazy execution
 // Thunk should use as pointer
 type Thunk struct {
 	// expression to execute
@@ -121,6 +136,7 @@ type Thunk struct {
 	Env *Env
 }
 
+// String returns the string represents the Thunk struct.
 func (t Thunk) String() string {
 	if t.ret != nil {
 		return fmt.Sprintf("#[Thunk %s]", t.ret)
@@ -135,7 +151,7 @@ func (t *Thunk) Value() (Expression, error) {
 	}
 	value, err := Eval(t.Exp, t.Env)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	switch t2 := value.(type) {
 	case *Thunk:
@@ -143,7 +159,7 @@ func (t *Thunk) Value() (Expression, error) {
 	default:
 	}
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	t.ret = value
 	return t.ret, nil
@@ -175,16 +191,21 @@ func ActualValue(exp Expression) (Expression, error) {
 	}
 }
 
+// Represents Nil in scheme
 type NilType struct{}
 
+// Strings returns the string representing NilType.
 func (n NilType) String() string {
 	return "()"
 }
 
+// Object of NilType
 var NilObj = NilType{}
 
+// Undef represents undefined expression value.
 type Undef struct{}
 
+// String just implements the Stringer interface.
 func (u Undef) String() string {
 	return "<UNDEF>"
 }
@@ -203,8 +224,10 @@ func extractList(expression Expression) (ret []Expression) {
 	}
 }
 
-var undefObj = Undef{}
+// Common Undef object.
+var UndefObj = Undef{}
 
+// IsNumber check whether the expression represents Number.
 func IsNumber(exp Expression) bool {
 	switch v := exp.(type) {
 	case string:
@@ -218,9 +241,9 @@ func IsNumber(exp Expression) bool {
 	default:
 		return false
 	}
-	return false
 }
 
+// IsString check whether the expression represents String in scheme.
 func IsString(exp Expression) bool {
 	switch v := exp.(type) {
 	case string:
@@ -234,18 +257,9 @@ func IsString(exp Expression) bool {
 	default:
 		return false
 	}
-	return false
 }
 
-func IsSpecialSyntaxExpression(exp Expression, name string) bool {
-	ops, ok := exp.([]Expression)
-	if !ok {
-		return false
-	}
-	operator := ops[0]
-	return operator == name
-}
-
+// IsSyntaxExpression check whether the expression is a scheme syntax expression.
 func IsSyntaxExpression(exp Expression) bool {
 	ops, ok := exp.([]Expression)
 	if !ok {
@@ -261,6 +275,7 @@ func IsSyntaxExpression(exp Expression) bool {
 	return false
 }
 
+// IsSymbol checks whether the expression is Symbol.
 func IsSymbol(expression Expression) bool {
 	_, ok := expression.([]Expression)
 	if ok {
@@ -275,6 +290,7 @@ func IsSymbol(expression Expression) bool {
 	return true
 }
 
+// IsBoolean return true if the expression represents bool.
 func IsBoolean(exp Expression) bool {
 	_, ok := exp.(bool)
 	if ok {
@@ -291,6 +307,7 @@ func IsTrue(exp Expression) bool {
 	return true
 }
 
+// IsNilObj returns true when the expression is NilTyp.
 func IsNilObj(obj Expression) bool {
 	switch obj.(type) {
 	case NilType:
@@ -300,7 +317,8 @@ func IsNilObj(obj Expression) bool {
 	}
 }
 
-func isUndefObj(obj Expression) bool {
+// IsUndefObj returns true when the expression is Undef.
+func IsUndefObj(obj Expression) bool {
 	switch obj.(type) {
 	case Undef:
 		return true
@@ -309,6 +327,7 @@ func isUndefObj(obj Expression) bool {
 	}
 }
 
+// IsPair checks whether the expression value is a *Pair.
 func IsPair(obj Expression) bool {
 	switch obj.(type) {
 	case *Pair:
@@ -318,12 +337,14 @@ func IsPair(obj Expression) bool {
 	}
 }
 
+// LambdaProcess wraps the body and env of a lambda expression
 type LambdaProcess struct {
 	params []Symbol
 	body   []Expression // expressions of the lambda process
 	env    *Env
 }
 
+// String implements the stringer interface
 func (lambda *LambdaProcess) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("(lambda (")
@@ -369,6 +390,7 @@ func concatLambdaBodyToString(expressions []Expression) string {
 	return buf.String()
 }
 
+// Return the expressions of body.
 func (lambda *LambdaProcess) Body() Expression {
 	if len(lambda.body) == 1 {
 		return lambda.body[0]
@@ -376,15 +398,17 @@ func (lambda *LambdaProcess) Body() Expression {
 	return sequenceToExp(lambda.body)
 }
 
-// Should only use with pointer
+// Pair combines the two values. Should only use with pointer
 type Pair struct {
 	Car, Cdr Expression
 }
 
+// IsNull checks whether the *Pair is null.
 func (p *Pair) IsNull() bool {
 	return p.Car == nil && p.Cdr == nil
 }
 
+// IsList check whether the *Pair is a well formed list.
 func (p *Pair) IsList() bool {
 	currentPair := p
 	for {
@@ -402,6 +426,7 @@ func (p *Pair) IsList() bool {
 	}
 }
 
+// String returns the string representing the *Pair.
 func (p *Pair) String() string {
 
 	currentPair := p
@@ -459,18 +484,46 @@ func valueToString(exp Expression) string {
 	return fmt.Sprintf("%v", exp)
 }
 
+// IsPrimitiveExpression checks whether the expressions value is the primitive types.
 func IsPrimitiveExpression(exp Expression) bool {
-	if isNullExp(exp) || isUndefObj(exp) ||
+	if IsNullExp(exp) || IsUndefObj(exp) ||
 		IsQuote(exp) || IsNumber(exp) ||
 		IsBoolean(exp) || IsString(exp) ||
 		IsThunk(exp) || IsPair(exp) ||
-		isList(exp) || isLambdaType(exp) {
+		isList(exp) || IsLambdaType(exp) {
 		return true
 	}
 	return false
 }
 
+// IsQuote check whether the value is Quote.
 func IsQuote(exp Expression) bool {
 	_, ok := exp.(Quote)
+	return ok
+}
+
+// IsNullExp checks whether the expression represents Null(nil, NilType, blank list, blank expression).
+func IsNullExp(exp Expression) bool {
+	if exp == nil {
+		return true
+	}
+	switch e := exp.(type) {
+	case NilType:
+		return true
+	case *Pair:
+		return e.IsNull()
+	case []Expression:
+		if len(e) == 0 {
+			return true
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+// IsLambdaType checks whether this expression low level value is *LambdaProcess
+func IsLambdaType(expression Expression) bool {
+	_, ok := expression.(*LambdaProcess)
 	return ok
 }

@@ -34,13 +34,17 @@ func neededIndents(reader io.RuneReader) int {
 	return len(stack)
 }
 
+// Represents mode the interpreter will run
 type InterpreterMode uint8
 
 const (
+	// Run as interactive shell
 	Interactive InterpreterMode = iota
+	// Run a file or script
 	NoneInteractive
 )
 
+// Interpreter read from source and evaluate them.
 type Interpreter struct {
 	currentFragment   []byte
 	currentLineScript []byte
@@ -53,10 +57,7 @@ type Interpreter struct {
 	env               *Env
 }
 
-func (i *Interpreter) clean() {
-
-}
-
+// Run start the interpreter and evaluate the input.
 func (i *Interpreter) Run() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -132,7 +133,6 @@ func (i *Interpreter) runInInteractiveMode() {
 }
 
 func (i *Interpreter) exitProcess() {
-	i.clean()
 	fmt.Println("\nExiting...")
 	os.Exit(0)
 }
@@ -245,14 +245,17 @@ func (i *Interpreter) evalPromptInput(input string) {
 	i.printIndents()
 }
 
+// NewFileInterpreter construct a *Interpreter from file.
 func NewFileInterpreter(reader io.Reader) *Interpreter {
 	return &Interpreter{input: reader, exit: exit, mode: NoneInteractive, env: setupBuiltinEnv()}
 }
 
+// NewFileInterpreterWithEnv construct a *Interpreter from io.reader init with env.
 func NewFileInterpreterWithEnv(reader io.Reader, env *Env) *Interpreter {
 	return &Interpreter{input: reader, exit: exit, mode: NoneInteractive, env: env}
 }
 
+// NewREPLInterpreter construct a REPL *Interpreter.
 func NewREPLInterpreter() *Interpreter {
 	i := &Interpreter{exit: exit, mode: Interactive, env: setupBuiltinEnv()}
 	i.initPromote()

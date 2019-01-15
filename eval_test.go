@@ -31,7 +31,7 @@ func TestEval(t *testing.T) {
 	}{
 		{[]Expression{"if", "#t", "1", "0"}, Number(1)},
 		{[]Expression{"if", "#f", "1", "0"}, Number(0)},
-		{[]Expression{"if", "#f", "1"}, undefObj},
+		{[]Expression{"if", "#f", "1"}, UndefObj},
 	}
 	for _, c := range testCases {
 		ret, _ = Eval(c.input, builtinEnv)
@@ -44,7 +44,7 @@ func TestEval(t *testing.T) {
 		expected Expression
 	}{
 		{[]Expression{"cond", []Expression{"#t", "1", "2"}}, Number(2)},
-		{[]Expression{"cond", []Expression{"#f", "1", "2"}}, undefObj},
+		{[]Expression{"cond", []Expression{"#f", "1", "2"}}, UndefObj},
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"#t", "2"}}, Number(2)},
 		{[]Expression{"cond", []Expression{"#f", "1", "2"}, []Expression{"else", `"else clause"`}}, String(`else clause`)},
 	}
@@ -234,7 +234,7 @@ func TestEval4(t *testing.T) {
 (eval z)`, Number(80)},
 		{`(define x 3) (eval 'x)`, Number(3)},
 		{`(define x 3) (eval ''x)`, Quote("x")},
-		{`(apply display '(3))`, undefObj},
+		{`(apply display '(3))`, UndefObj},
 		{`(apply (lambda x x) '(3))`, Number(3)},
 		{`(apply (lambda (x y) (+ x y)) '(3 4))`, Number(7)},
 	}
@@ -246,11 +246,11 @@ func TestEval4(t *testing.T) {
 	// test nothing panic
 	env := setupBuiltinEnv()
 	ret, _ := Eval([]Expression{"load", "\"test.scm\""}, env)
-	assert.Equal(t, undefObj, ret)
+	assert.Equal(t, UndefObj, ret)
 	ret, _ = Eval([]Expression{"load", "\"test\""}, env)
-	assert.Equal(t, undefObj, ret)
+	assert.Equal(t, UndefObj, ret)
 	ret, _ = Eval([]Expression{"load", []Expression{"quote", []Expression{"test.scm"}}}, env)
-	assert.Equal(t, undefObj, ret)
+	assert.Equal(t, UndefObj, ret)
 	_, err := env.Find("test-method")
 	assert.Nil(t, err)
 }
@@ -265,7 +265,7 @@ func TestEval5(t *testing.T) {
 		{`(force (delay (+ 1 2)))`, Number(3)},
 		{`(define (try a b) (if (= a 0) b a)) (try 1 (delay (+ 1 "x")))`, Number(1)},
 		// eval error
-		{`(define (try a b) (if (= a 0) (force b) (force a))) (try 0 (delay (+ 1 "x")))`, undefObj},
+		{`(define (try a b) (if (= a 0) (force b) (force a))) (try 0 (delay (+ 1 "x")))`, UndefObj},
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
@@ -282,7 +282,7 @@ func TestEval6(t *testing.T) {
 	}{
 		{`(or 1 unbound-syntax)`, true},
 		// eval error
-		{`(and 1 unbound-syntax)`, undefObj},
+		{`(and 1 unbound-syntax)`, UndefObj},
 	}
 	for _, c := range testCases {
 		env := setupBuiltinEnv()
@@ -320,7 +320,7 @@ func TestEval7(t *testing.T) {
                				#f
                				(even? (- n 1))))))
 				(even? 88))`, true},
-		{`(letrec ((b a) (a 1)) b)`, undefObj},
+		{`(letrec ((b a) (a 1)) b)`, UndefObj},
 		{`(define (f a)
 					(let ((b 3)) (set! a 3))
 					a)

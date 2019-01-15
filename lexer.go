@@ -2,17 +2,18 @@ package goscheme
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"strings"
 	"unicode"
 )
 
+// Tokenize return the scheme tokens of input string
 func Tokenize(inputScript string) []string {
 	t := NewTokenizerFromString(inputScript)
 	return t.Tokens()
 }
 
+// Tokenizer wraps the input to generate tokens.
 type Tokenizer struct {
 	Source       *bufio.Reader
 	Eof          bool
@@ -20,10 +21,12 @@ type Tokenizer struct {
 	currentToken string
 }
 
+// NewTokenizerFromString construct *Tokenizer from string
 func NewTokenizerFromString(input string) *Tokenizer {
 	return &Tokenizer{Source: bufio.NewReader(strings.NewReader(input)), currentCh: -1}
 }
 
+// NewTokenizerFromReader construct *Tokenizer from io.Reader
 func NewTokenizerFromReader(input io.Reader) *Tokenizer {
 	return &Tokenizer{Source: bufio.NewReader(input), currentCh: -1}
 }
@@ -136,12 +139,14 @@ func (t *Tokenizer) readNextToken() (string, bool) {
 	}
 }
 
+// NextToken read ahead and returns the next valid token.
 func (t *Tokenizer) NextToken() (string, bool) {
 	token, ok := t.readNextToken()
 	t.currentToken = token
 	return t.currentToken, ok
 }
 
+// Tokens returns all the tokens
 func (t *Tokenizer) Tokens() []string {
 	var ret []string
 	token, ok := t.NextToken()
@@ -150,49 +155,4 @@ func (t *Tokenizer) Tokens() []string {
 		token, ok = t.NextToken()
 	}
 	return ret
-}
-
-func Parse(tokens *[]string) (ret []Expression, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-
-	for len(*tokens) > 0 {
-		ret = append(ret, readTokens(tokens))
-	}
-	return
-}
-
-func readTokens(tokens *[]string) Expression {
-	if len(*tokens) == 0 {
-		return nil
-	}
-	token := (*tokens)[0]
-	*tokens = (*tokens)[1:]
-
-	switch token {
-	case "(":
-		ret := make([]Expression, 0)
-		for len(*tokens) >= 0 && (*tokens)[0] != ")" {
-			nextPart := readTokens(tokens)
-			ret = append(ret, nextPart)
-		}
-		if len(*tokens) == 0 {
-			panic("syntax error: missing ')'")
-		}
-		*tokens = (*tokens)[1:]
-		return ret
-	case ")":
-		panic("syntax error: unexpected ')'")
-	case "'":
-		ret := make([]Expression, 0, 4)
-		ret = append(ret, "quote")
-		nextPart := readTokens(tokens)
-		ret = append(ret, nextPart)
-		return ret
-	default:
-		return token
-	}
 }

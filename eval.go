@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// Eval is the main function to evaluate the expression in an environment.
 func Eval(exp Expression, env *Env) (ret Expression, err error) {
 	for {
 		if IsPrimitiveExpression(exp) {
@@ -22,21 +23,21 @@ func Eval(exp Expression, env *Env) (ret Expression, err error) {
 		if IsSyntaxExpression(exp) {
 			syntaxName, args, err := retrieveSyntaxAndArgs(exp)
 			if err != nil {
-				return undefObj, err
+				return UndefObj, err
 			}
 			syntax, _ := SyntaxMap[syntaxName]
 			exp, err = applySyntaxExpression(syntax, args, env)
 			if err != nil {
-				return undefObj, err
+				return UndefObj, err
 			}
 		} else {
 			ops, ok := exp.([]Expression)
 			if !ok {
-				return undefObj, fmt.Errorf("%s is not a valid expression", exp)
+				return UndefObj, fmt.Errorf("%s is not a valid expression", exp)
 			}
 			nextExp, newEnv, err := applyCallable(ops[0], ops[1:], env)
 			if err != nil {
-				return undefObj, err
+				return UndefObj, err
 			}
 			exp = nextExp
 			env = newEnv
@@ -57,7 +58,7 @@ func applyCallable(process Expression, argExpressions []Expression, env *Env) (E
 		for _, arg := range argExpressions {
 			v, err := Eval(arg, env)
 			if err != nil {
-				return undefObj, env, err
+				return UndefObj, env, err
 			}
 			args = append(args, v)
 		}
@@ -66,18 +67,18 @@ func applyCallable(process Expression, argExpressions []Expression, env *Env) (E
 	case *LambdaProcess:
 		newEnv := &Env{outer: p.env, frame: make(map[Symbol]Expression)}
 		if len(argExpressions) != len(p.params) {
-			return undefObj, env, errors.New(fmt.Sprintf("%v\n", p.String()) + "require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(argExpressions)) + " provide")
+			return UndefObj, env, errors.New(fmt.Sprintf("%v\n", p.String()) + "require " + strconv.Itoa(len(p.params)) + " but " + strconv.Itoa(len(argExpressions)) + " provide")
 		}
 		for i, arg := range argExpressions {
 			val, err := Eval(arg, env)
 			if err != nil {
-				return undefObj, env, err
+				return UndefObj, env, err
 			}
 			newEnv.Set(p.params[i], val)
 		}
 		return p.Body(), newEnv, nil
 	default:
-		return undefObj, env, errors.New(fmt.Sprintf("%v is not callable", fn))
+		return UndefObj, env, fmt.Errorf("%v is not callable", fn)
 	}
 }
 
@@ -96,11 +97,11 @@ func retrieveSyntaxAndArgs(exp Expression) (syntaxName string, args []Expression
 	return
 }
 func evalPrimitive(exp Expression) (Expression, error) {
-	if isNullExp(exp) {
+	if IsNullExp(exp) {
 		return NilObj, nil
 	}
-	if isUndefObj(exp) {
-		return undefObj, nil
+	if IsUndefObj(exp) {
+		return UndefObj, nil
 	}
 	if IsNumber(exp) {
 		return expressionToNumber(exp)
@@ -116,44 +117,44 @@ func evalPrimitive(exp Expression) (Expression, error) {
 
 func evalSet(args []Expression, env *Env) (Expression, error) {
 	if len(args) != 2 {
-		return undefObj, errors.New("set!: syntax error (set! requires variable and value arguments)")
+		return UndefObj, errors.New("set!: syntax error (set! requires variable and value arguments)")
 	}
 	sym, err := transExpressionToSymbol(args[0])
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	val, err := Eval(args[1], env)
 	currentEnv := env
 	for currentEnv != nil {
 		if _, ok := currentEnv.frame[sym]; ok {
 			currentEnv.Set(sym, val)
-			return undefObj, nil
+			return UndefObj, nil
 		}
 		currentEnv = env.outer
 	}
-	return undefObj, errors.New(fmt.Sprintf("variable %v cannot set! before define", sym))
+	return UndefObj, fmt.Errorf("variable %v cannot set! before define", sym)
 }
 
 func evalLetRec(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 2 {
-		return undefObj, errors.New("letrec: syntax error (letrec should pass the variables and body)")
+		return UndefObj, errors.New("letrec: syntax error (letrec should pass the variables and body)")
 	}
 	bindings, ok := args[0].([]Expression)
 	if !ok {
-		return undefObj, errors.New("letrec: syntax error (not a valid binding)")
+		return UndefObj, errors.New("letrec: syntax error (not a valid binding)")
 	}
 	newEnv := &Env{outer: env, frame: make(map[Symbol]Expression)}
 	// init symbols with undef
 	for _, exp := range bindings {
 		binding, ok := exp.([]Expression)
 		if !ok || len(binding) != 2 {
-			return undefObj, errors.New("letrec: syntax error (not a valid binding)")
+			return UndefObj, errors.New("letrec: syntax error (not a valid binding)")
 		}
 		sym, err := transExpressionToSymbol(binding[0])
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
-		newEnv.Set(sym, undefObj)
+		newEnv.Set(sym, UndefObj)
 	}
 	// set value for symbols
 	for _, exp := range bindings {
@@ -161,7 +162,7 @@ func evalLetRec(args []Expression, env *Env) (Expression, error) {
 		sym, _ := transExpressionToSymbol(binding[0])
 		val, err := Eval(binding[1], newEnv)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		newEnv.Set(sym, val)
 	}
@@ -178,11 +179,11 @@ func evalLetRec(args []Expression, env *Env) (Expression, error) {
 
 func evalL2RLet(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 2 {
-		return undefObj, errors.New("let*: syntax error (let* should pass the variables and body)")
+		return UndefObj, errors.New("let*: syntax error (let* should pass the variables and body)")
 	}
 	bindings, ok := args[0].([]Expression)
 	if !ok {
-		return undefObj, errors.New("let*: syntax error (not a valid binding)")
+		return UndefObj, errors.New("let*: syntax error (not a valid binding)")
 	}
 	var outerEnv, currentEnv *Env
 	outerEnv = env
@@ -190,15 +191,15 @@ func evalL2RLet(args []Expression, env *Env) (Expression, error) {
 		currentEnv = &Env{outer: outerEnv, frame: make(map[Symbol]Expression)}
 		binding, ok := exp.([]Expression)
 		if !ok || len(binding) != 2 {
-			return undefObj, errors.New("let*: syntax error (not a valid binding)")
+			return UndefObj, errors.New("let*: syntax error (not a valid binding)")
 		}
 		sym, err := transExpressionToSymbol(binding[0])
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		val, err := Eval(binding[1], currentEnv)
 		if err != nil {
-			return undefObj, nil
+			return UndefObj, nil
 		}
 		currentEnv.Set(sym, val)
 		outerEnv = currentEnv
@@ -216,25 +217,25 @@ func evalL2RLet(args []Expression, env *Env) (Expression, error) {
 
 func evalLet(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 2 {
-		return undefObj, errors.New("let: syntax error (let should pass the variables and body)")
+		return UndefObj, errors.New("let: syntax error (let should pass the variables and body)")
 	}
 	bindings, ok := args[0].([]Expression)
 	if !ok {
-		return undefObj, errors.New("let: syntax error (not a valid binding)")
+		return UndefObj, errors.New("let: syntax error (not a valid binding)")
 	}
 	newEnv := &Env{outer: env, frame: make(map[Symbol]Expression)}
 	for _, exp := range bindings {
 		binding, ok := exp.([]Expression)
 		if !ok || len(binding) != 2 {
-			return undefObj, errors.New("let: syntax error (not a valid binding)")
+			return UndefObj, errors.New("let: syntax error (not a valid binding)")
 		}
 		sym, err := transExpressionToSymbol(binding[0])
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		val, err := Eval(binding[1], env)
 		if err != nil {
-			return undefObj, nil
+			return UndefObj, nil
 		}
 		newEnv.Set(sym, val)
 	}
@@ -251,12 +252,12 @@ func evalLet(args []Expression, env *Env) (Expression, error) {
 
 func evalAnd(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 1 {
-		return undefObj, errors.New("and require at least 1 argument")
+		return UndefObj, errors.New("and require at least 1 argument")
 	}
 	for _, e := range args {
 		val, err := Eval(e, env)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		if !IsTrue(val) {
 			return false, nil
@@ -267,12 +268,12 @@ func evalAnd(args []Expression, env *Env) (Expression, error) {
 
 func evalOr(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 1 {
-		return undefObj, errors.New("or require at least 1 argument")
+		return UndefObj, errors.New("or require at least 1 argument")
 	}
 	for _, e := range args {
 		result, err := Eval(e, env)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		if IsTrue(result) {
 			return true, nil
@@ -283,33 +284,9 @@ func evalOr(args []Expression, env *Env) (Expression, error) {
 
 func evalDelay(args []Expression, env *Env) (Expression, error) {
 	if len(args) == 0 {
-		return undefObj, errors.New("delay require 1 argument")
+		return UndefObj, errors.New("delay require 1 argument")
 	}
 	return NewThunk(args[0], env), nil
-}
-
-func isNullExp(exp Expression) bool {
-	if exp == nil {
-		return true
-	}
-	switch e := exp.(type) {
-	case NilType:
-		return true
-	case *Pair:
-		return e.IsNull()
-	case []Expression:
-		if len(e) == 0 {
-			return true
-		}
-		return false
-	default:
-		return false
-	}
-}
-
-func isLambdaType(expression Expression) bool {
-	_, ok := expression.(*LambdaProcess)
-	return ok
 }
 
 func expToString(exp Expression) (String, error) {
@@ -318,7 +295,7 @@ func expToString(exp Expression) (String, error) {
 		pattern := regexp.MustCompile(`"((.|[\r\n])*?)"`)
 		m := pattern.FindAllStringSubmatch(s, -1)
 		if len(m) < 1 || len(m[0]) < 2 {
-			return "", errors.New("Not a string, format invalid.")
+			return "", errors.New("not a string, format invalid")
 		}
 		return String(m[0][1]), nil
 	case String:
@@ -326,30 +303,24 @@ func expToString(exp Expression) (String, error) {
 	default:
 		return "", errors.New("not as string")
 	}
-	s, _ := exp.(string)
-	pattern := regexp.MustCompile(`"((.|[\r\n])*?)"`)
-	m := pattern.FindAllStringSubmatch(s, -1)
-	if len(m) < 1 || len(m[0]) < 2 {
-		return "", errors.New("Not a string, format invalid.")
-	}
-	return String(m[0][1]), nil
 }
 
+// evalEval eval the scheme object and calculate its value
 func evalEval(args []Expression, env *Env) (Expression, error) {
 	if len(args) != 1 {
-		return undefObj, errors.New("syntax error (requires 1 argument)")
+		return UndefObj, errors.New("syntax error (requires 1 argument)")
 	}
 	expression := args[0]
 	arg, err := Eval(expression, env)
 	if !validEvalExp(arg) {
-		return undefObj, errors.New("error: malformed list")
+		return UndefObj, errors.New("error: malformed list")
 	}
 	expStr := valueToString(arg)
 	t := NewTokenizerFromString(expStr)
 	tokens := t.Tokens()
 	ret, err := Parse(&tokens)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	return EvalAll(ret, env)
 }
@@ -368,18 +339,18 @@ func validEvalExp(exp Expression) bool {
 
 func evalApply(args []Expression, env *Env) (Expression, error) {
 	if len(args) != 2 {
-		return undefObj, errors.New("syntax error (requires 2 argument)")
+		return UndefObj, errors.New("syntax error (requires 2 argument)")
 	}
 	procedure, err := Eval(args[0], env)
 	if err != nil {
-		return undefObj, nil
+		return UndefObj, nil
 	}
 	arg, err := Eval(args[1], env)
 	if err != nil {
-		return undefObj, nil
+		return UndefObj, nil
 	}
 	if !isList(arg) {
-		return undefObj, errors.New("argument must be a list")
+		return UndefObj, errors.New("argument must be a list")
 	}
 	argList := arg.(*Pair)
 	var argSlice = make([]Expression, 0, 1)
@@ -393,20 +364,20 @@ func evalApply(args []Expression, env *Env) (Expression, error) {
 // load other scheme script files
 func evalLoad(expression []Expression, env *Env) (Expression, error) {
 	if len(expression) != 1 {
-		return undefObj, errors.New("syntax error (requires 1 argument)")
+		return UndefObj, errors.New("syntax error (requires 1 argument)")
 	}
 	argValue, err := Eval(expression[0], env)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	switch v := argValue.(type) {
 	case String:
 		if err := loadFile(string(v), env); err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 	case Quote:
 		if err := loadFile(string(v), env); err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 	case *Pair:
 		if isList(v) {
@@ -419,9 +390,9 @@ func evalLoad(expression []Expression, env *Env) (Expression, error) {
 			}
 		}
 	default:
-		return undefObj, errors.New("argument can only contains string, quote or list")
+		return UndefObj, errors.New("argument can only contains string, quote or list")
 	}
-	return undefObj, nil
+	return UndefObj, nil
 }
 
 func loadFile(filePath string, env *Env) error {
@@ -439,7 +410,7 @@ func loadFile(filePath string, env *Env) error {
 
 func evalQuote(args []Expression, env *Env) (Expression, error) {
 	if len(args) != 1 {
-		return undefObj, errors.New("syntax error (requires 1 argument)")
+		return UndefObj, errors.New("syntax error (requires 1 argument)")
 	}
 	exp := args[0]
 	switch v := exp.(type) {
@@ -458,13 +429,13 @@ func evalQuote(args []Expression, env *Env) (Expression, error) {
 		for _, exp := range v {
 			q, err := evalQuote([]Expression{exp}, env)
 			if err != nil {
-				return undefObj, err
+				return UndefObj, err
 			}
 			args = append(args, q)
 		}
 		return listImpl(args...)
 	default:
-		return undefObj, errors.New("invalid quote argument")
+		return UndefObj, errors.New("invalid quote argument")
 	}
 }
 
@@ -496,7 +467,7 @@ func evalLambda(args []Expression, env *Env) (Expression, error) {
 
 func evalDefine(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 2 {
-		return undefObj, errors.New("syntax error, require more than two arguments")
+		return UndefObj, errors.New("syntax error, require more than two arguments")
 	}
 	// fetch the symbol/argument names and value/body
 	s, val := args[0], args[1:]
@@ -506,7 +477,7 @@ func evalDefine(args []Expression, env *Env) (Expression, error) {
 		for _, e := range se {
 			sym, err := transExpressionToSymbol(e)
 			if err != nil {
-				return undefObj, err
+				return UndefObj, err
 			}
 			symbols = append(symbols, sym)
 		}
@@ -514,19 +485,19 @@ func evalDefine(args []Expression, env *Env) (Expression, error) {
 		env.Set(Symbol(symbols[0]), p)
 	case Expression:
 		if len(val) != 1 {
-			return undefObj, errors.New("define: bad syntax (multiple expressions after identifier)")
+			return UndefObj, errors.New("define: bad syntax (multiple expressions after identifier)")
 		}
 		sym, err := transExpressionToSymbol(se)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		val, err := Eval(val[0], env)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		env.Set(sym, val)
 	}
-	return undefObj, nil
+	return UndefObj, nil
 }
 
 func transExpressionToSymbol(s Expression) (Symbol, error) {
@@ -534,13 +505,15 @@ func transExpressionToSymbol(s Expression) (Symbol, error) {
 		s, _ := s.(string)
 		return Symbol(s), nil
 	}
-	return "", errors.New(fmt.Sprintf("%v is not a symbol", s))
+	return "", fmt.Errorf("%v is not a symbol", s)
 }
 
 func makeLambdaProcess(paramNames []Symbol, body []Expression, env *Env) *LambdaProcess {
 	return &LambdaProcess{paramNames, body, env}
 }
 
+// EvalAll iterate the sequence of expressions and evaluate each one.
+// Returns the last evaluated value as the result
 func EvalAll(exps []Expression, env *Env) (ret Expression, err error) {
 	for _, exp := range exps {
 		ret, err = Eval(exp, env)
@@ -554,7 +527,7 @@ func EvalAll(exps []Expression, env *Env) (ret Expression, err error) {
 func expressionToNumber(exp Expression) (Number, error) {
 	v := exp
 	if !IsNumber(v) {
-		return 0, errors.New(fmt.Sprintf("%v is not a number", v))
+		return 0, fmt.Errorf("%v is not a number", v)
 	}
 	switch t := v.(type) {
 	case Number:
@@ -568,50 +541,49 @@ func expressionToNumber(exp Expression) (Number, error) {
 
 func conditionOfIfExpression(exp []Expression) (Expression, error) {
 	if len(exp) < 2 {
-		return undefObj, errors.New("not a valid if expression")
+		return UndefObj, errors.New("not a valid if expression")
 	}
 	return exp[0], nil
 }
 
 func trueExpOfIfExpression(exp []Expression) (Expression, error) {
 	if len(exp) < 2 {
-		return undefObj, errors.New("not a valid if expression")
+		return UndefObj, errors.New("not a valid if expression")
 	}
 	return exp[1], nil
 }
 
 func elseExpOfIfExpression(exp []Expression) (Expression, error) {
 	if len(exp) < 2 {
-		return undefObj, errors.New("not a valid if expression")
+		return UndefObj, errors.New("not a valid if expression")
 	}
 	if len(exp) < 3 {
-		return undefObj, nil
+		return UndefObj, nil
 	}
 	return exp[2], nil
 }
 
 func evalIf(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 2 {
-		return undefObj, errors.New("syntax error (requires 2 argument)")
+		return UndefObj, errors.New("syntax error (requires 2 argument)")
 	}
 	conditionExp, err := conditionOfIfExpression(args)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	condition, err := Eval(conditionExp, env)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	if IsTrue(condition) {
 		return trueExpOfIfExpression(args)
-	} else {
-		return elseExpOfIfExpression(args)
 	}
+	return elseExpOfIfExpression(args)
 }
 
 func evalBegin(args []Expression, env *Env) (Expression, error) {
 	if len(args) < 1 {
-		return undefObj, errors.New("syntax error (requires more than 1 arguments)")
+		return UndefObj, errors.New("syntax error (requires more than 1 arguments)")
 	}
 	for _, e := range args[:len(args)-1] {
 		Eval(e, env)
@@ -622,7 +594,7 @@ func evalBegin(args []Expression, env *Env) (Expression, error) {
 func evalCond(exp []Expression, env *Env) (Expression, error) {
 	equalIfExp, err := expandCond(exp)
 	if err != nil {
-		return undefObj, err
+		return UndefObj, err
 	}
 	return Eval(equalIfExp, env)
 }
@@ -638,21 +610,21 @@ func condClauses(exp []Expression) []Expression {
 func expandCond(exp Expression) (Expression, error) {
 	e, ok := exp.([]Expression)
 	if !ok {
-		return undefObj, fmt.Errorf("%v not a valid expression", exp)
+		return UndefObj, fmt.Errorf("%v not a valid expression", exp)
 	}
 	return condClausesToIf(condClauses(e))
 }
 
 func conditionOfClause(exp []Expression) (Expression, error) {
 	if len(exp) == 0 {
-		return undefObj, fmt.Errorf("cannot find clause of %v", exp)
+		return UndefObj, fmt.Errorf("cannot find clause of %v", exp)
 	}
 	return exp[0], nil
 }
 
 func processesOfClause(exp []Expression) (Expression, error) {
 	if len(exp) < 2 {
-		return undefObj, errors.New("clause of expression not found")
+		return UndefObj, errors.New("clause of expression not found")
 	}
 	return exp[1:], nil
 }
@@ -667,41 +639,40 @@ func isElseClause(clause Expression) bool {
 }
 
 func condClausesToIf(exp []Expression) (Expression, error) {
-	if isNullExp(exp) {
+	if IsNullExp(exp) {
 		// just a nil obj
-		return undefObj, nil
+		return UndefObj, nil
 	}
 	first, ok := exp[0].([]Expression)
 	if !ok {
-		return undefObj, fmt.Errorf("%v not a valid expression", exp[0])
+		return UndefObj, fmt.Errorf("%v not a valid expression", exp[0])
 	}
 	rest := exp[1:]
 	if isElseClause(first) {
 		if len(rest) != 0 {
-			return undefObj, errors.New("else clause must in the last position: cond->if")
+			return UndefObj, errors.New("else clause must in the last position: cond->if")
 		}
 		clause, err := processesOfClause(first)
 		if err != nil {
-			return undefObj, err
+			return UndefObj, err
 		}
 		return sequenceToExp(clause), nil
-	} else {
-		var condition, seq, clause Expression
-		condition, err := conditionOfClause(first)
-		if err != nil {
-			return undefObj, err
-		}
-		clause, err = processesOfClause(first)
-		if err != nil {
-			return undefObj, err
-		}
-		seq = sequenceToExp(clause)
-		elseIfClause, err := condClausesToIf(rest)
-		if err != nil {
-			return undefObj, err
-		}
-		return makeIf(condition, seq, elseIfClause), nil
 	}
+	var condition, seq, clause Expression
+	condition, err := conditionOfClause(first)
+	if err != nil {
+		return UndefObj, err
+	}
+	clause, err = processesOfClause(first)
+	if err != nil {
+		return UndefObj, err
+	}
+	seq = sequenceToExp(clause)
+	elseIfClause, err := condClausesToIf(rest)
+	if err != nil {
+		return UndefObj, err
+	}
+	return makeIf(condition, seq, elseIfClause), nil
 
 }
 
@@ -714,5 +685,5 @@ func sequenceToExp(exp Expression) Expression {
 	case Expression:
 		return exs
 	}
-	return undefObj
+	return UndefObj
 }
