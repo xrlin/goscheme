@@ -68,6 +68,3 @@
 
 (define (display-pascal-triangle start-level max-level)
  (display-pascal-triangle-helper start-level max-level (number-char-width (max-pascal-number max-level))))
-
-(define (c n) (display n) (c (+ n 1)))
-(c 1)
