@@ -9,7 +9,7 @@
 ## Installation
 
 ```bash
-go install github.com/xrlin/goscheme/cmd/goscheme/...
+go get github.com/xrlin/goscheme/cmd/goscheme
 ```
 
 Or you can download the corresponding pre-compiled executable file in [release page](https://github.com/xrlin/goscheme/releases).
