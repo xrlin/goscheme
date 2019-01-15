@@ -10,7 +10,7 @@ func TestEval(t *testing.T) {
 	var ret Expression
 	ret, _ = Eval("3", builtinEnv)
 	assert.Equal(t, ret, Number(3))
-	ret, _ = Eval([]Expression{"define", "x", "3"}, builtinEnv)
+	Eval([]Expression{"define", "x", "3"}, builtinEnv)
 	ret, _ = Eval("x", builtinEnv)
 	assert.Equal(t, Number(3), ret)
 	Eval([]Expression{"define", []Expression{"fn", "y"}, []Expression{"+", "x", "y"}}, builtinEnv)

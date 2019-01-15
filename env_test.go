@@ -26,7 +26,7 @@ func TestEnv_Find(t *testing.T) {
 	ret, err = env2.Find("y")
 	assert.Equal(t, 1, ret)
 	assert.Nil(t, err)
-	ret, err = env2.Find("unknown")
+	_, err = env2.Find("unknown")
 	assert.NotNil(t, err)
 
 }
