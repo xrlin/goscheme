@@ -123,20 +123,23 @@ func (t *Tokenizer) readNextToken() (string, bool) {
 	}
 	if t.currentCh == '"' {
 		return t.readString()
-	} else if t.currentCh == '(' {
+	}
+	if t.currentCh == '(' {
 		t.readAhead()
 		return "(", true
-	} else if t.currentCh == ')' {
+	}
+	if t.currentCh == ')' {
 		t.readAhead()
 		return ")", true
-	} else if isSymbolCh(t.currentCh) {
+	}
+	if isSymbolCh(t.currentCh) {
 		return t.readSymbol()
-	} else if t.currentCh == '\'' {
+	}
+	if t.currentCh == '\'' {
 		t.readAhead()
 		return "'", true
-	} else {
-		return "", false
 	}
+	return "", false
 }
 
 // NextToken read ahead and returns the next valid token.

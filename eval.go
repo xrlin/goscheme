@@ -25,7 +25,7 @@ func Eval(exp Expression, env *Env) (ret Expression, err error) {
 			if err != nil {
 				return UndefObj, err
 			}
-			syntax, _ := SyntaxMap[syntaxName]
+			syntax := SyntaxMap[syntaxName]
 			exp, err = applySyntaxExpression(syntax, args, env)
 			if err != nil {
 				return UndefObj, err
@@ -123,7 +123,11 @@ func evalSet(args []Expression, env *Env) (Expression, error) {
 	if err != nil {
 		return UndefObj, err
 	}
-	val, err := Eval(args[1], env)
+	var val Expression
+	val, err = Eval(args[1], env)
+	if err != nil {
+		return UndefObj, err
+	}
 	currentEnv := env
 	for currentEnv != nil {
 		if _, ok := currentEnv.frame[sym]; ok {
@@ -312,13 +316,17 @@ func evalEval(args []Expression, env *Env) (Expression, error) {
 	}
 	expression := args[0]
 	arg, err := Eval(expression, env)
+	if err != nil {
+		return UndefObj, err
+	}
 	if !validEvalExp(arg) {
 		return UndefObj, errors.New("error: malformed list")
 	}
 	expStr := valueToString(arg)
 	t := NewTokenizerFromString(expStr)
 	tokens := t.Tokens()
-	ret, err := Parse(&tokens)
+	var ret []Expression
+	ret, err = Parse(&tokens)
 	if err != nil {
 		return UndefObj, err
 	}

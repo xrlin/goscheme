@@ -7,7 +7,8 @@ import (
 
 func TestEval(t *testing.T) {
 	builtinEnv := setupBuiltinEnv()
-	ret, _ := Eval("3", builtinEnv)
+	var ret Expression
+	ret, _ = Eval("3", builtinEnv)
 	assert.Equal(t, ret, Number(3))
 	ret, _ = Eval([]Expression{"define", "x", "3"}, builtinEnv)
 	ret, _ = Eval("x", builtinEnv)

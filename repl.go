@@ -48,7 +48,6 @@ const (
 type Interpreter struct {
 	currentFragment   []byte
 	currentLineScript []byte
-	interactive       bool
 	input             io.Reader
 	prompt            *prompt.Prompt
 	exit              chan os.Signal
@@ -143,8 +142,6 @@ func (i *Interpreter) checkExit() {
 		select {
 		case <-i.exit:
 			i.exitProcess()
-		default:
-
 		}
 	}
 }

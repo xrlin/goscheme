@@ -472,10 +472,10 @@ func shouldPrint(exp Expression) bool {
 func valueToString(exp Expression) string {
 	switch v := exp.(type) {
 	case bool:
-		if v == false {
+		if !v {
 			return "#f"
 		}
-		if v == true {
+		if v {
 			return "#t"
 		}
 	default:

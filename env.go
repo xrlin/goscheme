@@ -101,18 +101,22 @@ func plusFunc(args ...Expression) (Expression, error) {
 }
 
 func divFunc(args ...Expression) (Expression, error) {
-	var ret Number = 1
-	ret, err := expressionToNumber(args[0])
-	if err != nil {
-		return UndefObj, err
-	}
-	for i, arg := range args {
-		if i == 0 {
-			continue
+	if len(args) == 1 {
+		num, err := expressionToNumber(args[0])
+		if err != nil {
+			return UndefObj, err
 		}
+		return 1 / num, nil
+	}
+	var ret Number
+	for i, arg := range args {
 		num, err := expressionToNumber(arg)
 		if err != nil {
 			return UndefObj, err
+		}
+		if i == 0 {
+			ret = num
+			continue
 		}
 		ret = ret / num
 	}
