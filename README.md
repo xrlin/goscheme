@@ -46,7 +46,7 @@ goscheme test.scm
     ;#=>832040
     ```
 
-* Internal definition
+* Mutually recursion
 
     ```scheme
     (letrec (
