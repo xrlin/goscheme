@@ -124,7 +124,7 @@ Explore `example.scm` for more examples.
     `set-car!`
     ... etc
 
-Though it is a toy project just for fun and practive, Feel free to open an issue or make a merge request is you find bugs or have some suggestions.
+Though it is a toy project just for fun and practice, Feel free to open an issue or make a merge request is you find bugs or have some suggestions.
 
 Happy coding...
 
